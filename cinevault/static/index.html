@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CineVault — Track, Discover, and Share Movies</title>
+<meta name="description" content="Discover, rate, and track movies on CineVault. Your premium cinematic tracker featuring advanced recommendations and community reviews."/>
+<script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,300,400,500,600,700&f[]=satoshi@300,400,500,700,900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<style type="text/tailwindcss">
+  @theme {
+    /* CineVault — Cinematic Editorial Noir */
+    --color-primary: #FF5500;
+    --color-primary-container: #FF6611;
+    
+    --color-background: #0A0A0A;
+    --color-surface: #111111;
+    
+    --color-surface-container-low: #0F0F0F;
+    --color-surface-container: #151515;
+    --color-surface-container-high: #1A1A1A;
+    --color-surface-container-highest: #222222;
+    --color-surface-bright: #2A2A2A;
+    
+    --color-on-surface: #F5F5F5;
+    --color-on-surface-variant: #888888;
+    --color-outline-variant: #2A2A2A;
+    
+    --font-heading: 'Clash Display', 'Satoshi', sans-serif;
+    --font-label: 'Satoshi', sans-serif;
+    --font-condensed: 'Clash Display', sans-serif;
+    --font-body: 'Satoshi', system-ui, sans-serif;
+    --font-sans: 'Satoshi', system-ui, sans-serif;
+  }
+  
+  body { 
+    background-color: var(--color-background); 
+    color: var(--color-on-surface); 
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .font-headline { font-family: var(--font-heading); }
+  .font-condensed { font-family: var(--font-condensed); }
+  .font-label { font-family: var(--font-label); text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.75rem; font-weight: 500; }
+  
+  /* Cinematic overlays */
+  .cinematic-shadow { background: linear-gradient(0deg, var(--color-background) 0%, oklch(0.12 0.01 260 / 0.7) 50%, rgba(0,0,0,0) 100%); }
+  .glass-panel { background: rgba(255,255,255,0.03); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.06); }
+  .glass-nav { background: rgba(10,10,10,0.8); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .material-symbols-outlined { font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; vertical-align: middle; }
+  
+  /* Film grain noise overlay */
+  .cv-grain::before {
+    content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Card system — unified surface */
+  .cv-card {
+    background: var(--color-surface-container);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .cv-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 24px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.08);
+  }
+
+  /* Entrance animation */
+  .cv-entrance {
+    animation: cvEntrance 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+  }
+  @keyframes cvEntrance {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Legacy utilities preserved */
+  .glow-border { box-shadow: 0 0 0 1px rgba(255,85,0,0.15), 0 0 30px rgba(255,85,0,0.05); }
+  .card-hover { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+  .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.08); }
+  
+  /* Stats counter animation */
+  @keyframes countUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .stat-animate { animation: countUp 0.6s ease-out forwards; }
+
+  /* Gradient dividers */
+  .cv-divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent); }
+</style>
+</head>
+<body class="selection:bg-primary-container selection:text-on-primary-container">
+
+<!-- ============================================================
+     TOP NAV BAR
+     Sign In link has id="sign-in-link" — JS wires it to auth modal
+     ============================================================ -->
+<header class="fixed top-0 w-full z-50 flex items-center justify-between px-8 glass-nav h-[68px]">
+  <div class="flex items-center gap-10">
+    <a href="/" class="flex items-center gap-2">
+      <span class="bg-primary text-black font-black text-[20px] px-2.5 py-1 rounded-lg tracking-tight">CV</span>
+      <span class="text-white font-black text-[18px] tracking-tight font-headline hidden sm:block">CineVault</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8">
+      <a class="text-white/70 text-[13px] font-medium hover:text-white transition-colors duration-300" href="#">Movies</a>
+      <a class="text-white/70 text-[13px] font-medium hover:text-white transition-colors duration-300" href="#">TV Shows</a>
+      <a class="text-white/70 text-[13px] font-medium hover:text-white transition-colors duration-300" href="#">Awards</a>
+      <a class="text-white/70 text-[13px] font-medium hover:text-white transition-colors duration-300" href="#">Community</a>
+    </nav>
+  </div>
+  <div class="flex items-center gap-5">
+    <div class="relative hidden lg:block">
+      <span class="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-white/30 text-[18px]">search</span>
+      <input class="bg-white/5 border border-white/8 rounded-full py-2 pl-10 pr-5 text-sm w-[260px] text-white placeholder-white/30 focus:outline-none focus:border-primary/50 focus:bg-white/8 transition-all duration-300" placeholder="Search CineVault" type="text"/>
+    </div>
+    <div class="flex items-center gap-5 text-white text-[13px] font-medium">
+      <a class="flex items-center gap-1.5 text-white/60 hover:text-white transition-colors" href="#">
+        <span class="material-symbols-outlined text-[18px]">bookmark</span> Watchlist
+      </a>
+      <a id="sign-in-link" class="bg-white/8 hover:bg-white/12 border border-white/10 px-5 py-2 rounded-full transition-all cursor-pointer text-white/80 hover:text-white" href="#">Sign In</a>
+    </div>
+  </div>
+</header>
+
+<main class="w-full">
+  <!-- ============================================================
+       HERO SECTION
+       All ids are targeted by loadFeaturedMovie() in JS
+       ============================================================ -  <section class="relative w-full min-h-[780px] overflow-hidden flex items-end cv-grain">
+    <div class="absolute inset-0 w-full h-full">
+      <img id="hero-bg" alt="Hero Background" class="w-full h-full object-cover object-top"
+           src="https://lh3.googleusercontent.com/aida-public/AB6AXuAS34eEnfKQRD71_8yoonZ4tsDmQjMroh002iHVeFBLASgAL2l1VaWrzxpKm_PkulyNXCbAfJO6JI5KBilW38A0gJ-ZGhrjODPl6LFKm5zm4KNo8uWC71Dz8fNIVpu6gD8wDer6-LjDnfxop1QJkXIG0gSZObUNLFb_VzTeArP35lyP8ysVc1ZX3OuRnxs4f23EJD2DT5v-jVNC-FdbXLnFcI9TAZ9Qfdgq8vPQqqPWBijSpH08hRD961NsHLoRAK5uOvi2okHud7Da"/>
+      <div class="absolute inset-0 cinematic-shadow"></div>
+      <div class="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent"></div>
+    </div>
+    <div class="relative z-10 max-w-[1400px] mx-auto w-full px-[80px] pb-20 flex items-end justify-between gap-16">
+      <!-- Left: Movie Info -->
+      <div class="flex flex-col gap-5 max-w-2xl">
+        <div class="flex gap-3">
+          <span class="glass-panel px-4 py-1.5 rounded-full text-[10px] font-bold tracking-[0.2em] text-white/80 uppercase flex items-center gap-2">
+            <span class="material-symbols-outlined text-xs" style="font-variation-settings:'FILL' 1;">play_arrow</span> TRAILER
+          </span>
+          <span class="glass-panel px-4 py-1.5 rounded-full text-[10px] font-bold tracking-[0.2em] text-white/80 uppercase flex items-center gap-2">
+            <span class="material-symbols-outlined text-xs">add</span> WATCHLIST
+          </span>
+        </div>
+
+        <h1 id="hero-title" class="text-white font-black leading-[0.85] tracking-[-0.04em] font-headline mb-2 mt-2 cursor-pointer" style="font-size: clamp(72px, 8vw, 140px);">Loading...</h1>
+
+        <div class="flex items-center gap-3 text-white/50 text-[13px] font-medium">
+          <span id="hero-year">--</span>
+          <span class="w-1 h-1 rounded-full bg-white/20"></span>
+          <span id="hero-pg">--</span>
+          <span class="w-1 h-1 rounded-full bg-white/20"></span>
+          <span id="hero-duration">--</span>
+          <span class="w-1 h-1 rounded-full bg-white/20"></span>
+          <span id="hero-genres">--</span>
+        </div>
+
+        <div class="flex items-center gap-10 mt-1">
+          <div class="flex flex-col gap-1">
+            <span class="text-[9px] text-white/40 uppercase font-bold tracking-[0.2em]">CineVault Rating</span>
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings:'FILL' 1;">star</span>
+              <span id="hero-imdb" class="font-condensed text-[26px] text-white font-bold tracking-tighter">
+                --<span class="text-[14px] text-white/40 font-normal">/10</span>
+              </span>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-[9px] text-white/40 uppercase font-bold tracking-[0.2em]">Metascore</span>
+            <span id="hero-metascore" class="bg-[#6AC045] text-black font-condensed font-bold text-[18px] px-2 py-0.5 rounded">--</span>
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-[9px] text-white/40 uppercase font-bold tracking-[0.2em]">Your Rating</span>
+            <button onclick="openReviewModal(window.currentFeaturedMovieId)" class="flex items-center gap-2 group">
+              <span class="material-symbols-outlined text-white/30 group-hover:text-primary transition-colors">star</span>
+              <span class="text-white/30 group-hover:text-white text-[13px] font-bold uppercase transition-colors">Rate</span>
+            </button>
+          </div>
+        </div>
+
+        <p id="hero-plot" class="text-white/50 text-[14px] leading-relaxed mt-1 max-w-lg">Loading...</p>
+
+        <div class="flex items-center gap-4 mt-6">
+          <button class="bg-gradient-to-r from-primary to-primary-container text-white shadow-xl shadow-primary/20 hover:shadow-primary/40 font-black px-10 py-4 rounded-full transition-all flex items-center gap-3 active:scale-95 duration-200 uppercase tracking-[0.15em] text-[12px]">
+            <span class="material-symbols-outlined text-[18px]" style="font-variation-settings:'FILL' 1;">play_arrow</span>
+            Watch Trailer
+          </button>
+          <button id="watchlist-btn" class="glass-panel hover:bg-white/10 text-white/80 hover:text-white font-bold px-10 py-4 rounded-full transition-all flex items-center gap-3 active:scale-95 duration-200 tracking-[0.15em] uppercase text-[12px]">
+            <span class="material-symbols-outlined text-[18px]">add</span>
+            Watchlist
+          </button>
+        </div>
+      </div>
+
+      <!-- Right: Stats Counters (Dominic style) -->
+      <div class="hidden lg:flex flex-col gap-6 items-end text-right">
+        <div class="stat-animate" style="animation-delay: 0.1s">
+          <span class="text-primary font-headline font-black text-[56px] leading-none tracking-tighter">500+</span>
+          <p class="text-white/40 text-[11px] uppercase tracking-[0.2em] font-bold mt-1">Movies Cataloged</p>
+        </div>
+        <div class="stat-animate" style="animation-delay: 0.3s">
+          <span class="text-white font-headline font-black text-[56px] leading-none tracking-tighter">50+</span>
+          <p class="text-white/40 text-[11px] uppercase tracking-[0.2em] font-bold mt-1">Active Users</p>
+        </div>
+        <div class="stat-animate" style="animation-delay: 0.5s">
+          <span class="text-white font-headline font-black text-[56px] leading-none tracking-tighter">1K+</span>
+          <p class="text-white/40 text-[11px] uppercase tracking-[0.2em] font-bold mt-1">Reviews Written</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="max-w-[1400px] mx-auto px-[80px] py-28">
+    <div class="flex items-end justify-between mb-14">
+      <div>
+        <h2 class="text-white text-[36px] font-black font-headline tracking-tight mb-2">Featured Picks</h2>
+        <p class="text-white/40 font-label text-xs uppercase tracking-[0.25em]">Curated by CineVault Editors</p>
+      </div>
+      <button class="text-white/50 hover:text-white transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
+        View All <span class="material-symbols-outlined text-sm">arrow_forward</span>
+      </button>
+    </div>
+    <div class="grid grid-cols-12 grid-rows-2 gap-5 h-[720px]">
+      <!-- Large Highlight Card -->
+      <div class="col-span-8 row-span-2 relative group overflow-hidden rounded-2xl bg-surface-container border border-white/5 card-hover">
+        <img alt="Cinema feature" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50"
+             src="https://lh3.googleusercontent.com/aida-public/AB6AXuBoE2EWeGhfPSlCHmO5e0jH6tC1cCGbO-plpfMfKF3808OtiOvIR6-qs7AWKLevNchkBcIb4MVhME02qS0-RsKFKmw1OWnvknEiDqaEM-6P4S83IzVI1e4L1LTHsibGaHNJazkLNfAJ16zMk7f7V7yryee6Urobspmn1ktVQ0jBt3RiT4US6g5rVRLXp4sLJ84VXCttJiNeXhebphf0LUN06YslQrnxhWKWCx2qxCksXJRCENfAx03Ic364mi-3Grfiquj0SdjQknVm"/>
+        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+        <div class="absolute bottom-0 left-0 p-10 w-full">
+          <span id="editorial-tag" class="text-primary font-bold text-[10px] uppercase tracking-[0.25em] mb-4 block">Loading...</span>
+          <h3 id="editorial-title" class="text-4xl font-black text-white mb-4 leading-tight max-w-md font-headline tracking-tight">Loading...</h3>
+          <p id="editorial-body" class="text-white/50 max-w-sm mb-6 text-sm leading-relaxed">Loading...</p>
+          <button class="bg-primary text-white px-8 py-3.5 rounded-full text-[11px] font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all uppercase tracking-[0.15em] active:scale-95 duration-200">
+            Read Full Article
+          </button>
+        </div>
+      </div>
+      <!-- Secondary Card 1 -->
+      <div class="col-span-4 row-span-1 relative group overflow-hidden rounded-2xl bg-surface-container border border-white/5 card-hover">
+        <img alt="Coming Soon" class="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-all duration-500"
+             src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsrKMEnUJl6QUlNZiC4T1JX3pjUiG0FsosRgeWm-MaYQJntIjBX1G_dCILvUixnzrofWI1JeOO3KOmhPVOhmFrrkh585IL8nZCxs54h4F4g5Vn5Dz4YsbSDavqmrgz4HceGLhAUvX4_jrTfx8McW_F8VcE7UUauZ8K1tQesV9qsSXtNjaEuZy9oJwPvC1ELkSw4Eb-nx-r6VBjdLVAJOU4eCsp-IhbXgc6mOYm8EWGhod2lpUIDiDm8wX3Ar_rLTvxy_z1fRl2NYr4"/>
+        <div class="absolute inset-0 p-8 flex flex-col justify-end">
+          <span class="text-primary text-[10px] font-bold uppercase tracking-[0.25em] mb-2">Coming Soon</span>
+          <h4 class="text-white font-bold text-xl font-headline tracking-tight">Coming Soon in July</h4>
+          <p class="text-white/40 text-xs mt-1.5">12 new titles arriving this month</p>
+        </div>
+      </div>
+      <!-- Secondary Card 2 -->
+      <div class="col-span-4 row-span-1 relative group overflow-hidden rounded-2xl bg-surface-container border border-white/5 card-hover">
+        <img alt="User Collection" class="w-full h-full object-cover opacity-30"
+             src="https://lh3.googleusercontent.com/aida-public/AB6AXuDId9VXGiCwf0UXBusH8Ubpa8_2bNP0dhQtbpgE81h71w7nkROs3aQb9zt8i2Amhcf1vmCkXJtF8CGddhlgHJAQdWW-jI1KYhMCbc0f1IkyEWRfY14579vwF6elKzUvec8WEtDgCLf44zfc349gdY6y3lYrtaH-hUna55Ap2fQsQjVB56SMfe_HNae-AFLX2tBs7FsSRmani6uZajwscl8RgUnpyJ5s_0Ux23nbHA0oiAALcSk4Eq9tPLyxcVGDY9zTrfkLuLnyimGL"/>
+        <div class="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-black/50">
+          <span class="material-symbols-outlined text-primary text-3xl mb-3" style="font-variation-settings:'FILL' 1;">stars</span>
+          <h4 class="text-white font-bold text-lg font-headline tracking-tight">Top Rated Movies</h4>
+          <p class="text-white/40 text-xs mt-2 max-w-[200px]">The highest-rated films as voted by the community.</p>
+          <button class="mt-5 text-primary text-[10px] font-bold uppercase tracking-[0.2em] border-b border-primary/40 pb-1 hover:border-primary transition-colors">Explore the List</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       TOP BOX OFFICE STRIP
+       id="boxoffice-grid" — populated by loadBoxOffice() in JS
+       ============================================================ -->
+  <section class="bg-surface-container-low py-20 border-y border-white/5">
+    <div class="max-w-[1400px] mx-auto px-[80px]">
+      <h3 class="text-white text-xl font-black font-headline tracking-tight mb-10 flex items-center gap-3">
+        <span class="w-1 h-8 bg-primary rounded-full"></span> Top Box Office
+      </h3>
+      <div id="boxoffice-grid" class="grid grid-cols-2 md:grid-cols-4 gap-6"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       ALL MOVIES GRID — search results shown here too
+       ============================================================ -->
+  <section class="max-w-[1400px] mx-auto px-[80px] py-24" id="movies-section">
+    <div class="flex items-end justify-between mb-10 flex-wrap gap-6">
+      <div>
+        <h2 id="movies-heading" class="text-white text-[36px] font-black font-headline tracking-tight mb-1">All Movies</h2>
+        <p id="movies-subheading" class="text-white/40 font-label text-xs uppercase tracking-[0.25em]">From the database</p>
+      </div>
+      <div class="flex items-center gap-3 flex-wrap">
+        <select id="filter-genre"
+                class="bg-white/5 border border-white/8 text-white/70
+                       text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary/50 cursor-pointer appearance-none">
+          <option value="">All Genres</option>
+        </select>
+        <select id="filter-sort"
+                class="bg-white/5 border border-white/8 text-white/70
+                       text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary/50 cursor-pointer appearance-none">
+          <option value="release_year">Newest First</option>
+          <option value="imdb_score">Highest Rated</option>
+          <option value="title">A–Z</option>
+        </select>
+        <button id="clear-search-btn" onclick="clearSearch()"
+                class="hidden text-xs font-bold text-white/60 border border-white/10
+                       px-4 py-2.5 rounded-xl hover:text-white hover:border-white/30 transition-colors">
+          ✕ Clear Search
+        </button>
+      </div>
+    </div>
+    <p id="movies-count" class="text-white/30 text-xs mb-6"></p>
+    <div id="movies-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
+      <div class="skeleton rounded-2xl h-[340px]"></div>
+      <div class="skeleton rounded-2xl h-[340px]"></div>
+      <div class="skeleton rounded-2xl h-[340px]"></div>
+      <div class="skeleton rounded-2xl h-[340px]"></div>
+      <div class="skeleton rounded-2xl h-[340px]"></div>
+      <div class="skeleton rounded-2xl h-[340px]"></div>
+    </div>
+  </section>
+</main>
+
+<style>
+  .skeleton { background:linear-gradient(90deg,#141414 25%,#1a1a1a 50%,#141414 75%);
+    background-size:200% 100%; animation:shimmer 1.5s infinite; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .line-clamp-3 { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+</style>
+
+  <!-- ============================================================
+       "FIND MY MATCH" CTA — glowing button that opens the wizard
+       ============================================================ -->
+  <section class="relative overflow-hidden py-24 border-y border-white/5">
+    <div class="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/3"></div>
+    <div class="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-[120px]"></div>
+    <div class="max-w-[1400px] mx-auto px-[80px] relative z-10 flex items-center justify-between">
+      <div>
+        <span class="text-primary text-[10px] font-bold uppercase tracking-[0.3em] mb-4 block">AI-Powered Discovery</span>
+        <h2 class="text-white text-[48px] lg:text-[64px] font-black font-headline tracking-[-0.03em] leading-[0.9] mb-5">
+          Find Your<br/><span class="text-primary">Perfect Match</span>
+        </h2>
+        <p class="text-white/40 text-[14px] max-w-md leading-relaxed">
+          Tell us your genre and top movies — our algorithm will find the exact film you need tonight.
+        </p>
+      </div>
+      <button id="open-wizard-btn" onclick="openWizard()"
+              class="group relative bg-gradient-to-r from-primary to-primary-container text-white font-black px-14 py-6 rounded-full
+                     text-[13px] uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 duration-200
+                     flex items-center gap-4">
+        <span class="material-symbols-outlined text-[24px]" style="font-variation-settings:'FILL' 1;">auto_awesome</span>
+        Find My Match
+        <span class="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full animate-ping"></span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       MOOD-BASED DISCOVERY — "What's Your Vibe?"
+       ============================================================ -->
+  <section class="max-w-[1400px] mx-auto px-[80px] py-28" id="mood-section">
+    <div class="mb-14">
+      <h2 class="text-white text-[36px] font-black font-headline tracking-tight mb-2">What's Your Vibe?</h2>
+      <p class="text-white/40 font-label text-xs uppercase tracking-[0.25em]">Select your mood — we'll find the perfect movies</p>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-12" id="mood-cards">
+      <button onclick="selectMood('mind_bending')" class="mood-card group flex flex-col items-center gap-3 p-6 rounded-2xl border border-white/5 bg-surface-container hover:border-purple-500/30 transition-all duration-300 cursor-pointer" style="--mood-glow: rgba(168,85,247,0.1);" onmouseenter="this.style.boxShadow='0 0 40px var(--mood-glow)'" onmouseleave="this.style.boxShadow='none'">
+        <span class="text-4xl group-hover:scale-125 transition-transform duration-300">🌀</span>
+        <span class="text-white text-xs font-bold uppercase tracking-wider">Mind-Bending</span>
+      </button>
+      <button onclick="selectMood('feel_good')" class="mood-card group flex flex-col items-center gap-3 p-6 rounded-2xl border border-white/5 bg-surface-container hover:border-yellow-500/30 transition-all duration-300 cursor-pointer" style="--mood-glow: rgba(234,179,8,0.1);" onmouseenter="this.style.boxShadow='0 0 40px var(--mood-glow)'" onmouseleave="this.style.boxShadow='none'">
+        <span class="text-4xl group-hover:scale-125 transition-transform duration-300">☀️</span>
+        <span class="text-white text-xs font-bold uppercase tracking-wider">Feel-Good</span>
+      </button>
+      <button onclick="selectMood('edge_of_seat')" class="mood-card group flex flex-col items-center gap-3 p-6 rounded-2xl border border-white/5 bg-surface-container hover:border-red-500/30 transition-all duration-300 cursor-pointer" style="--mood-glow: rgba(239,68,68,0.1);" onmouseenter="this.style.boxShadow='0 0 40px var(--mood-glow)'" onmouseleave="this.style.boxShadow='none'">
+        <span class="text-4xl group-hover:scale-125 transition-transform duration-300">😰</span>
+        <span class="text-white text-xs font-bold uppercase tracking-wider">Edge of Seat</span>
+      </button>
+      <button onclick="selectMood('make_me_cry')" class="mood-card group flex flex-col items-center gap-3 p-6 rounded-2xl border border-white/5 bg-surface-container hover:border-blue-400/30 transition-all duration-300 cursor-pointer" style="--mood-glow: rgba(96,165,250,0.1);" onmouseenter="this.style.boxShadow='0 0 40px var(--mood-glow)'" onmouseleave="this.style.boxShadow='none'">
+        <span class="text-4xl group-hover:scale-125 transition-transform duration-300">😢</span>
+        <span class="text-white text-xs font-bold uppercase tracking-wider">Make Me Cry</span>
+      </button>
+      <button onclick="selectMood('date_night')" class="mood-card group flex flex-col items-center gap-3 p-6 rounded-2xl border border-white/5 bg-surface-container hover:border-pink-500/30 transition-all duration-300 cursor-pointer" style="--mood-glow: rgba(236,72,153,0.1);" onmouseenter="this.style.boxShadow='0 0 40px var(--mood-glow)'" onmouseleave="this.style.boxShadow='none'">
+        <span class="text-4xl group-hover:scale-125 transition-transform duration-300">💕</span>
+        <span class="text-white text-xs font-bold uppercase tracking-wider">Date Night</span>
+      </button>
+      <button onclick="selectMood('epic_adventure')" class="mood-card group flex flex-col items-center gap-3 p-6 rounded-2xl border border-white/5 bg-surface-container hover:border-emerald-500/30 transition-all duration-300 cursor-pointer" style="--mood-glow: rgba(16,185,129,0.1);" onmouseenter="this.style.boxShadow='0 0 40px var(--mood-glow)'" onmouseleave="this.style.boxShadow='none'">
+        <span class="text-4xl group-hover:scale-125 transition-transform duration-300">🗺️</span>
+        <span class="text-white text-xs font-bold uppercase tracking-wider">Epic Adventure</span>
+      </button>
+    </div>
+    <!-- Mood results rendered here -->
+    <div id="mood-results" class="hidden">
+      <h3 id="mood-results-title" class="text-white text-xl font-bold mb-6"></h3>
+      <div id="mood-results-grid" class="flex gap-5 overflow-x-auto pb-8 snap-x touch-pan-x" style="-ms-overflow-style:none; scrollbar-width:none;"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       BLIND DATE WITH A MOVIE — mystery card
+       ============================================================ -->
+  <section class="py-28 bg-surface-container-low border-y border-white/5">
+    <div class="max-w-[1400px] mx-auto px-[80px]">
+      <div class="flex items-end justify-between mb-14">
+        <div>
+          <h2 class="text-white text-[36px] font-black font-headline tracking-tight mb-2">Blind Date With a Movie</h2>
+          <p class="text-white/40 font-label text-xs uppercase tracking-[0.25em]">No title. No poster. Just vibes. Are you intrigued?</p>
+        </div>
+        <button onclick="loadBlindDate()" class="text-white/40 hover:text-white transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
+          Shuffle <span class="material-symbols-outlined text-sm">shuffle</span>
+        </button>
+      </div>
+      <div id="blind-date-card" class="relative max-w-2xl mx-auto">
+        <!-- Mystery side (shown first) -->
+        <div id="blind-mystery" class="bg-surface-container border border-white/10 rounded-3xl p-10 text-center shadow-2xl transition-all duration-500">
+          <div class="text-6xl mb-6">🎬</div>
+          <p id="blind-hint" class="text-white text-xl font-bold leading-relaxed mb-6 italic">"Loading a mystery for you..."</p>
+          <div class="flex items-center justify-center gap-6 text-on-surface-variant text-sm mb-8">
+            <span id="blind-era" class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-sm">calendar_today</span> --</span>
+            <span id="blind-duration" class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-sm">schedule</span> --</span>
+            <span id="blind-genre-hint" class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-sm">category</span> --</span>
+          </div>
+          <div class="flex items-center justify-center gap-4">
+            <button onclick="revealBlindDate()" class="bg-gradient-to-r from-primary to-primary-container text-white font-black px-10 py-4 rounded-full uppercase tracking-widest text-sm shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95">
+              I'm Intrigued
+            </button>
+            <button onclick="loadBlindDate()" class="border border-white/20 text-white font-bold px-8 py-4 rounded-full uppercase tracking-widest text-sm hover:bg-white/5 transition-all active:scale-95">
+              Next →
+            </button>
+          </div>
+        </div>
+        <!-- Reveal side (hidden until click) -->
+        <div id="blind-reveal" class="hidden bg-surface-container border border-primary/30 rounded-3xl overflow-hidden shadow-2xl shadow-primary/10 transition-all duration-500">
+          <div class="flex">
+            <img id="blind-reveal-poster" src="" alt="" class="w-48 h-72 object-cover flex-shrink-0"/>
+            <div class="p-8 flex flex-col justify-center">
+              <span class="text-primary text-xs font-bold uppercase tracking-widest mb-2">Your Blind Date Is...</span>
+              <h3 id="blind-reveal-title" class="text-white text-3xl font-black font-headline tracking-tight mb-2"></h3>
+              <p id="blind-reveal-meta" class="text-on-surface-variant text-sm mb-3"></p>
+              <p id="blind-reveal-plot" class="text-on-surface-variant text-sm leading-relaxed mb-4 line-clamp-3"></p>
+              <div class="flex items-center gap-3">
+                <a id="blind-reveal-link" href="#" class="bg-primary text-white font-bold px-6 py-2.5 rounded-full text-sm uppercase tracking-wider hover:shadow-primary/30 hover:shadow-lg transition-all">View Details</a>
+                <button onclick="loadBlindDate()" class="text-on-surface-variant hover:text-white text-sm font-bold transition-colors">Try Another</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       RECOMMENDATIONS SECTION (Step 8)
+       ============================================================ -->
+  <section class="max-w-[1400px] mx-auto px-[80px] py-28">
+    <div class="flex items-end justify-between mb-14">
+      <div>
+        <h2 class="text-white text-[36px] font-black font-headline tracking-tight mb-2">Recommended For You</h2>
+        <p id="rec-strategy-label" class="text-white/40 font-label text-xs uppercase tracking-[0.25em]">
+          Loading recommendations...
+        </p>
+      </div>
+    </div>
+    <div id="recommendations-grid" class="flex gap-6 overflow-x-auto snap-x pb-8" style="-ms-overflow-style:none; scrollbar-width:none;">
+      <div class="bg-surface-container rounded-lg h-48 min-w-[250px] animate-pulse snap-center"></div>
+      <div class="bg-surface-container rounded-lg h-48 min-w-[250px] animate-pulse snap-center"></div>
+      <div class="bg-surface-container rounded-lg h-48 min-w-[250px] animate-pulse snap-center"></div>
+    </div>
+  </section>
+
+<!-- ============================================================
+     WIZARD MODAL — fullscreen overlay, multi-step
+     ============================================================ -->
+<div id="wizard-modal" class="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+  <div class="bg-surface border border-white/10 rounded-3xl p-10 w-full max-w-2xl relative shadow-2xl max-h-[90vh] overflow-y-auto">
+    <button onclick="closeWizard()" class="absolute top-6 right-6 material-symbols-outlined text-white/50 hover:text-white text-2xl">close</button>
+
+    <!-- Step 1: Pick Genre -->
+    <div id="wizard-step-1">
+      <div class="text-center mb-8">
+        <span class="material-symbols-outlined text-primary text-5xl mb-2" style="font-variation-settings:'FILL' 1;">auto_awesome</span>
+        <h2 class="text-white text-3xl font-black font-headline tracking-tight mb-2">Find Your Match</h2>
+        <p class="text-on-surface-variant text-sm">Step 1 of 3 — What genre are you in the mood for?</p>
+      </div>
+      <div id="wizard-genre-grid" class="grid grid-cols-3 gap-3">
+        <!-- JS populates these -->
+      </div>
+    </div>
+
+    <!-- Step 2: Pick 1-3 movies you love in that genre -->
+    <div id="wizard-step-2" class="hidden">
+      <div class="text-center mb-8">
+        <h2 class="text-white text-3xl font-black font-headline tracking-tight mb-2">Nice Choice!</h2>
+        <p class="text-on-surface-variant text-sm">Step 2 of 3 — Select up to 3 movies you've seen and loved</p>
+      </div>
+      <div id="wizard-movies-grid" class="grid grid-cols-3 gap-4">
+        <!-- JS populates -->
+      </div>
+      <button id="wizard-step2-next" onclick="wizardStep3()"
+              class="mt-8 w-full bg-gradient-to-r from-primary to-primary-container text-white font-black py-4 rounded-full uppercase tracking-widest text-sm shadow-lg hover:shadow-primary/40 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+              disabled>
+        Find My Match →
+      </button>
+    </div>
+
+    <!-- Step 3: The Result -->
+    <div id="wizard-step-3" class="hidden">
+      <div class="text-center mb-8">
+        <span class="material-symbols-outlined text-primary text-5xl mb-2" style="font-variation-settings:'FILL' 1;">stars</span>
+        <h2 class="text-white text-3xl font-black font-headline tracking-tight mb-2">Your Perfect Match</h2>
+        <p class="text-on-surface-variant text-sm">Based on your taste, we found this for you</p>
+      </div>
+      <div id="wizard-result" class="flex gap-6 items-start">
+        <!-- JS populates -->
+      </div>
+      <div id="wizard-reasons" class="mt-6 flex flex-col gap-2"></div>
+      <div class="flex gap-3 mt-8">
+        <a id="wizard-result-link" href="#" class="flex-1 text-center bg-gradient-to-r from-primary to-primary-container text-white font-black py-4 rounded-full uppercase tracking-widest text-sm shadow-lg hover:shadow-primary/40 transition-all active:scale-95">
+          View This Movie
+        </a>
+        <button onclick="resetWizard()" class="flex-1 border border-white/20 text-white font-bold py-4 rounded-full uppercase tracking-widest text-sm hover:bg-white/5 transition-all active:scale-95">
+          Start Over
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Footer -->
+<div class="cv-divider max-w-[1400px] mx-auto"></div>
+<footer class="bg-surface w-full py-20">
+  <div class="max-w-[1400px] mx-auto px-[80px]">
+    <div class="grid grid-cols-4 gap-16 mb-16">
+      <div>
+        <div class="flex items-center gap-2 mb-6">
+          <span class="bg-primary text-black font-black text-[16px] px-2 py-0.5 rounded-lg tracking-tight">CV</span>
+          <span class="text-white font-black text-[16px] tracking-tight font-headline">CineVault</span>
+        </div>
+        <p class="text-white/30 text-xs leading-relaxed">Your premium cinematic companion. Discover, track, and share movies with intelligent recommendations.</p>
+      </div>
+      <div>
+        <h4 class="text-white text-xs font-bold uppercase tracking-[0.2em] mb-5">Discover</h4>
+        <div class="flex flex-col gap-3">
+          <a class="text-white/40 text-xs hover:text-white/70 transition-colors" href="#">Movies</a>
+          <a class="text-white/40 text-xs hover:text-white/70 transition-colors" href="#">TV Shows</a>
+          <a class="text-white/40 text-xs hover:text-white/70 transition-colors" href="#">Top Rated</a>
+          <a class="text-white/40 text-xs hover:text-white/70 transition-colors" href="#">Trending</a>
+        </div>
+      </div>
+      <div>
+        <h4 class="text-white text-xs font-bold uppercase tracking-[0.2em] mb-5">Community</h4>
+        <div class="flex flex-col gap-3">
+          <a class="text-white/40 text-xs hover:text-white/70 transition-colors" href="#">Reviews</a>
+          <a class="text-white/40 text-xs hover:text-white/70 transition-colors" href="#">Watchlists</a>
+          <a class="text-white/40 text-xs hover:text-white/70 transition-colors" href="#">Awards</a>
+          <a class="text-white/40 text-xs hover:text-white/70 transition-colors" href="#">Box Office</a>
+        </div>
+      </div>
+      <div>
+        <h4 class="text-white text-xs font-bold uppercase tracking-[0.2em] mb-5">Company</h4>
+        <div class="flex flex-col gap-3">
+          <a class="text-white/40 text-xs hover:text-white/70 transition-colors" href="#">About CineVault</a>
+          <a class="text-white/40 text-xs hover:text-white/70 transition-colors" href="#">Press Room</a>
+          <a class="text-white/40 text-xs hover:text-white/70 transition-colors" href="#">Privacy Policy</a>
+          <a class="text-white/40 text-xs hover:text-white/70 transition-colors" href="#">Terms of Use</a>
+        </div>
+      </div>
+    </div>
+    <div class="border-t border-white/5 pt-8 flex items-center justify-between">
+      <p class="text-white/20 text-[10px] uppercase tracking-[0.15em]">© 2024 CineVault. All rights reserved.</p>
+      <div class="flex gap-6">
+        <a class="material-symbols-outlined text-white/20 hover:text-white/50 transition-colors text-[18px]" href="#">public</a>
+        <a class="material-symbols-outlined text-white/20 hover:text-white/50 transition-colors text-[18px]" href="#">movie</a>
+        <a class="material-symbols-outlined text-white/20 hover:text-white/50 transition-colors text-[18px]" href="#">grade</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ============================================================
+     AUTH MODAL — Login / Register (Step 6)
+     Hidden by default, shown on Sign In click
+     ============================================================ -->
+<div id="auth-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 hidden">
+  <div class="bg-surface-container border border-surface-container-high rounded-xl p-8 w-full max-w-md relative">
+    <button onclick="closeAuthModal()" class="absolute top-4 right-4 material-symbols-outlined text-white/50 hover:text-white">close</button>
+    <div class="flex gap-4 mb-8 border-b border-surface-container-high pb-4">
+      <button id="tab-login" onclick="switchTab('login')" class="text-white font-bold text-sm pb-1 border-b-2 border-primary">Sign In</button>
+      <button id="tab-register" onclick="switchTab('register')" class="text-white/40 font-bold text-sm pb-1 border-b-2 border-transparent">Register</button>
+    </div>
+    <p id="auth-error" class="text-red-400 text-sm mb-4 hidden"></p>
+    <!-- Login Form -->
+    <div id="form-login">
+      <div class="flex flex-col gap-4">
+        <input id="login-email" type="email" placeholder="Email" class="bg-surface-container text-white rounded-lg px-4 py-3 text-sm border border-outline-variant focus:border-primary outline-none"/>
+        <input id="login-password" type="password" placeholder="Password" class="bg-surface-container text-white rounded-lg px-4 py-3 text-sm border border-outline-variant focus:border-primary outline-none"/>
+        <button onclick="handleLogin()" class="bg-primary hover:bg-primary-container text-black font-bold py-3 rounded-lg transition-all">Sign In</button>
+      </div>
+    </div>
+    <!-- Register Form -->
+    <div id="form-register" class="hidden">
+      <div class="flex flex-col gap-4">
+        <input id="reg-username" type="text" placeholder="Username" class="bg-surface-container text-white rounded-lg px-4 py-3 text-sm border border-outline-variant focus:border-primary outline-none"/>
+        <input id="reg-email" type="email" placeholder="Email" class="bg-surface-container text-white rounded-lg px-4 py-3 text-sm border border-outline-variant focus:border-primary outline-none"/>
+        <input id="reg-password" type="password" placeholder="Password (min 6 chars)" class="bg-surface-container text-white rounded-lg px-4 py-3 text-sm border border-outline-variant focus:border-primary outline-none"/>
+        <button onclick="handleRegister()" class="bg-primary hover:bg-primary-container text-black font-bold py-3 rounded-lg transition-all">Create Account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================
+     JAVASCRIPT — All API integrations (Steps 5 + 6 + 7)
+     ============================================================ -->
+<script>
+// Base URL for all API calls
+const API = 'http://localhost:5000';
+
+// ---------------------------------------------------------------
+// UTILITY (Global Fetch Interceptor for MySQL error catching)
+// ---------------------------------------------------------------
+const originalFetch = window.fetch;
+window.fetch = async function(...args) {
+    try {
+        const response = await originalFetch(...args);
+        if (response.status === 500) {
+            showToast("Server Error 500: Database Connection failed! Please enter MySQL password in config.py.", "error");
+        }
+        return response;
+    } catch (err) {
+        showToast("Fetch Failed! Is the server running?", "error");
+        throw err;
+    }
+};
+
+function showToast(msg, type='error') {
+    const t = document.createElement('div');
+    t.className = `fixed top-24 right-8 px-6 py-4 rounded-xl shadow-2xl z-[9999] transition-all transform flex items-center gap-3 ${type==='error' ? 'bg-red-900 border border-red-500' : 'bg-surface-container border border-primary'} text-white font-bold`;
+    t.innerHTML = `<span class="material-symbols-outlined">${type==='error' ? 'error' : 'check_circle'}</span> ${msg}`;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(()=>t.remove(), 300); }, 5000);
+}
+
+function formatDuration(minutes) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h}h ${m}min`;
+}
+
+
+// ===============================================================
+// STEP 5 — DATA LOADERS
+// ===============================================================
+
+// Loads featured movie into the Hero section
+async function loadFeaturedMovie() {
+  try {
+    const res  = await fetch(`${API}/api/movies/featured`);
+    const data = await res.json();
+    if (!data.success) return;
+
+    const m = data.movie;
+    document.getElementById('hero-title').textContent    = m.title;
+    document.getElementById('hero-title').style.cursor    = 'pointer';
+    document.getElementById('hero-title').onclick         = () => window.location.href = `/movie/${m.id}`;
+    document.getElementById('hero-year').textContent     = m.release_year;
+    document.getElementById('hero-pg').textContent       = m.rating_pg;
+    document.getElementById('hero-duration').textContent = formatDuration(m.duration_min);
+    document.getElementById('hero-genres').textContent   = m.genres;
+    document.getElementById('hero-imdb').innerHTML       =
+      `${m.imdb_score}<span class="text-[14px] text-on-surface-variant font-normal tracking-normal">/10</span>`;
+    document.getElementById('hero-metascore').textContent = m.metascore;
+    document.getElementById('hero-plot').textContent      = m.plot;
+    if (m.poster_url) document.getElementById('hero-bg').src = m.poster_url;
+
+    // Store globally — used by watchlist and review buttons
+    window.currentFeaturedMovieId = m.id;
+  } catch (err) {
+    console.error('Featured movie load failed:', err);
+  }
+}
+
+// Loads top box office into the strip
+async function loadBoxOffice() {
+  try {
+    const res  = await fetch(`${API}/api/movies/boxoffice`);
+    const data = await res.json();
+    if (!data.success) return;
+
+    const grid = document.getElementById('boxoffice-grid');
+    grid.innerHTML = '';
+    data.box_office.forEach(item => {
+      grid.insertAdjacentHTML('beforeend', `
+        <a href="/movie/${item.movie_id}" class="flex items-center gap-5 group cursor-pointer p-4 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/5 transition-all duration-300">
+          <span class="font-condensed text-[44px] text-white/10 group-hover:text-primary/40 transition-colors font-black tracking-tighter leading-none">
+            ${item.rank_num}
+          </span>
+          <div>
+            <p class="text-white font-bold text-sm group-hover:text-primary transition-colors">${item.title}</p>
+            <p class="text-white/30 text-xs mt-1">${item.gross}</p>
+          </div>
+        </a>
+      `);
+    });
+  } catch (err) {
+    console.error('Box office load failed:', err);
+  }
+}
+
+// Loads editorial content into the large Featured Picks card
+async function loadEditorials() {
+  try {
+    const res  = await fetch(`${API}/api/movies/editorials`);
+    const data = await res.json();
+    if (!data.success || !data.editorials.length) return;
+
+    const main = data.editorials[0];
+    document.getElementById('editorial-tag').textContent   = main.tag;
+    document.getElementById('editorial-title').textContent = main.title;
+    document.getElementById('editorial-body').textContent  = main.body;
+  } catch (err) {
+    console.error('Editorials load failed:', err);
+  }
+}
+
+
+// ===============================================================
+// STEP 6 — AUTH SYSTEM
+// ===============================================================
+
+function openAuthModal()  { document.getElementById('auth-modal').classList.remove('hidden'); }
+function closeAuthModal() { document.getElementById('auth-modal').classList.add('hidden'); }
+
+function switchTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('form-login').classList.toggle('hidden', !isLogin);
+  document.getElementById('form-register').classList.toggle('hidden', isLogin);
+  document.getElementById('tab-login').className = isLogin
+    ? 'text-white font-bold text-sm pb-1 border-b-2 border-primary'
+    : 'text-white/40 font-bold text-sm pb-1 border-b-2 border-transparent';
+  document.getElementById('tab-register').className = !isLogin
+    ? 'text-white font-bold text-sm pb-1 border-b-2 border-primary'
+    : 'text-white/40 font-bold text-sm pb-1 border-b-2 border-transparent';
+  showAuthError('');
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.classList.toggle('hidden', !msg);
+}
+
+async function checkLoginState() {
+  try {
+    const res  = await fetch(`${API}/api/auth/me`, { credentials: 'include' });
+    const data = await res.json();
+    if (data.logged_in) updateNavbarForLoggedInUser(data.user.username);
+  } catch (err) {
+    console.error('Auth check failed:', err);
+  }
+}
+
+function updateNavbarForLoggedInUser(username) {
+  const container = document.getElementById('nav-user-actions');
+  if (container) {
+    container.innerHTML = `
+      <a href="/profile" class="text-white hover:text-primary font-bold mr-4 text-sm flex items-center gap-2"><span class="material-symbols-outlined">person</span> ${username}</a>
+      <button onclick="handleLogout()" class="text-on-surface-variant hover:text-white text-sm font-bold border border-outline-variant px-3 py-1.5 rounded-sm transition-colors">Logout</button>
+    `;
+  }
+}
+
+async function handleLogin() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value.trim();
+  if (!email || !password) { showAuthError('Please fill in all fields'); return; }
+
+  try {
+    const res  = await fetch(`${API}/api/auth/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }), credentials: 'include'
+    });
+    const data = await res.json();
+    if (data.success) { closeAuthModal(); updateNavbarForLoggedInUser(data.user.username); }
+    else showAuthError(data.error);
+  } catch (err) { showAuthError('Could not connect to server'); }
+}
+
+async function handleRegister() {
+  const username = document.getElementById('reg-username').value.trim();
+  const email    = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value.trim();
+  if (!username || !email || !password) { showAuthError('Please fill in all fields'); return; }
+
+  try {
+    const res  = await fetch(`${API}/api/auth/register`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password }), credentials: 'include'
+    });
+    const data = await res.json();
+    if (data.success) { closeAuthModal(); updateNavbarForLoggedInUser(data.user.username); }
+    else showAuthError(data.error);
+  } catch (err) { showAuthError('Could not connect to server'); }
+}
+
+async function handleLogout() {
+  await fetch(`${API}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+  window.location.reload();
+}
+
+
+// ===============================================================
+// STEP 7 — WATCHLIST
+// ===============================================================
+
+async function addToWatchlist(movieId) {
+  if (!movieId) return;
+  try {
+    const res  = await fetch(`${API}/api/watchlist/add`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movie_id: movieId }), credentials: 'include'
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      const btn = document.getElementById('watchlist-btn');
+      if (btn) {
+        btn.textContent = '✓ Added';
+        setTimeout(() => { btn.innerHTML = '<span class="material-symbols-outlined">add</span> Add to Watchlist'; }, 2000);
+      }
+    } else if (res.status === 401) {
+      openAuthModal();  // Not logged in — show login modal
+    } else {
+      alert(data.error);
+    }
+  } catch (err) { console.error('Watchlist error:', err); }
+}
+
+
+// ===============================================================
+// STEP 7 — REVIEWS
+// ===============================================================
+
+function openReviewModal(movieId) {
+  if (!movieId) { openAuthModal(); return; }
+  const existing = document.getElementById('review-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id        = 'review-modal';
+  modal.className = 'fixed inset-0 z-[200] flex items-center justify-center bg-black/70';
+  modal.innerHTML = `
+    <div class="bg-surface-container border border-surface-container-high rounded-xl p-8 w-full max-w-md">
+      <h3 class="text-white font-bold text-lg mb-6">Rate & Review</h3>
+      <div class="flex gap-2 mb-4" id="star-row">
+        ${[1,2,3,4,5,6,7,8,9,10].map(n =>
+          `<span class="cursor-pointer text-outline-variant hover:text-primary text-xl"
+                 onclick="setRating(${n})" id="star-${n}">★</span>`
+        ).join('')}
+      </div>
+      <p class="text-on-surface-variant text-sm mb-4">
+        Selected: <span id="rating-display" class="text-primary font-bold">--</span>/10
+      </p>
+      <textarea id="review-comment" placeholder="Write your review (optional)..."
+                class="w-full bg-surface-container text-white rounded-lg px-4 py-3 text-sm
+                       border border-outline-variant focus:border-primary outline-none h-28 resize-none mb-4">
+      </textarea>
+      <div class="flex gap-3">
+        <button onclick="submitReview(${movieId})"
+                class="flex-1 bg-primary text-black font-bold py-2.5 rounded-lg">Submit</button>
+        <button onclick="document.getElementById('review-modal').remove()"
+                class="flex-1 border border-outline-variant text-white font-bold py-2.5 rounded-lg">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  window._selectedRating = null;
+}
+
+function setRating(n) {
+  window._selectedRating = n;
+  document.getElementById('rating-display').textContent = n;
+  for (let i = 1; i <= 10; i++) {
+    document.getElementById(`star-${i}`).style.color = i <= n ? 'var(--color-primary)' : '';
+  }
+}
+
+async function submitReview(movieId) {
+  const rating  = window._selectedRating;
+  const comment = document.getElementById('review-comment').value.trim();
+  if (!rating) { alert('Please select a rating'); return; }
+
+  try {
+    const res  = await fetch(`${API}/api/reviews/add`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movie_id: movieId, rating, comment }), credentials: 'include'
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      document.getElementById('review-modal').remove();
+      alert('Review submitted!');
+    } else if (res.status === 401) {
+      document.getElementById('review-modal').remove();
+      openAuthModal();
+    } else {
+      alert(data.error);
+    }
+  } catch (err) { console.error('Review error:', err); }
+}
+
+
+// ===============================================================
+// STEP 8 — RECOMMENDATION SYSTEM
+// ===============================================================
+
+// Strategy label map — shown in the UI under the section heading
+const STRATEGY_LABELS = {
+  genre_based:     '🎬 Based on genres in your watchlist',
+  collaborative:   '👥 Liked by users with similar taste',
+  top_rated:       '⭐ Highest rated by the community',
+  similar:         '🔗 Similar movies'
+};
+
+// Loads recommendations from the smart router endpoint
+// Flask picks the right strategy automatically based on user state
+async function loadRecommendations() {
+  try {
+    const res  = await fetch(`${API}/api/recommendations/`, { credentials: 'include' });
+    const data = await res.json();
+
+    if (!data.success) return;
+
+    // Update the strategy label so the user (and examiner!) can see which algorithm ran
+    const label = document.getElementById('rec-strategy-label');
+    if (label) label.textContent = STRATEGY_LABELS[data.strategy] || data.reason;
+
+    renderRecommendations(data.movies);
+
+  } catch (err) {
+    console.error('Recommendations load failed:', err);
+  }
+}
+
+// Builds the movie card grid from the API response
+function renderRecommendations(movies) {
+  const grid = document.getElementById('recommendations-grid');
+  if (!grid || !movies.length) return;
+
+  grid.innerHTML = '';  // clear skeleton loaders
+
+  movies.forEach(m => {
+    // CineVault score color: green ≥7, yellow ≥5, red <5
+    const scoreColor = m.imdb_score >= 7 ? '#6AC045'
+                     : m.imdb_score >= 5 ? 'var(--color-primary)'
+                     : '#e74c3c';
+
+    // match_score or community_score if available (shown as badge)
+    const extraBadge = m.match_score
+      ? `<span class="text-xs text-primary font-bold">${m.match_score} genre match${m.match_score > 1 ? 'es' : ''}</span>`
+      : m.community_score
+      ? `<span class="text-xs text-primary font-bold">Community: ${m.community_score}/10</span>`
+      : '';
+
+    grid.insertAdjacentHTML('beforeend', `
+      <a href="/movie/${m.id}" class="bg-surface-container border border-white/5 rounded-2xl overflow-hidden group cursor-pointer
+                  card-hover flex flex-col relative z-0 hover:z-10 min-w-[180px] max-w-[200px]">
+
+        <!-- Poster -->
+        <div class="relative h-56 bg-surface-container-high flex items-center justify-center overflow-hidden">
+          ${m.poster_url
+            ? `<img src="${m.poster_url}" alt="${m.title}"
+                    class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500 ease-out"/>`
+            : `<span class="material-symbols-outlined text-5xl text-white/10">movie</span>`
+          }
+          <!-- Play Overlay -->
+          <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+            <div class="w-11 h-11 rounded-full border border-primary/60 flex items-center justify-center backdrop-blur-md bg-black/30 text-primary transform scale-75 group-hover:scale-100 transition-all duration-300">
+               <span class="material-symbols-outlined text-[20px]" style="font-variation-settings:'FILL' 1;">play_arrow</span>
+            </div>
+          </div>
+          <!-- Score badge -->
+          <div class="absolute top-2.5 right-2.5 flex items-center gap-1 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-lg">
+            <span class="material-symbols-outlined text-[12px]" style="color:${scoreColor};font-variation-settings:'FILL' 1;">star</span>
+            <span class="text-white text-[10px] font-bold">${m.imdb_score ?? 'N/A'}</span>
+          </div>
+          <!-- PG badge -->
+          ${m.rating_pg ? `<div class="absolute top-2.5 left-2.5 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded text-[9px] text-white/70 font-bold">${m.rating_pg}</div>` : ''}
+        </div>
+
+        <!-- Card content -->
+        <div class="p-4 flex flex-col gap-1.5 flex-1">
+          <h4 class="text-white font-bold text-xs group-hover:text-primary transition-colors leading-snug line-clamp-2">
+            ${m.title}
+          </h4>
+          <div class="flex items-center gap-2 text-white/30 text-[10px]">
+            <span>${m.release_year}</span>
+          </div>
+          ${m.genres
+            ? `<p class="text-white/25 text-[10px] line-clamp-2">${m.genres}</p>`
+            : ''
+          }
+          <div class="mt-auto pt-1.5">${extraBadge}</div>
+        </div>
+      </a>
+    `);
+  });
+}
+
+
+
+// ===============================================================
+// MOVIES GRID + SEARCH
+// ===============================================================
+
+let currentSearchQuery = '';
+
+// Utility: build a movie card for the grid
+function buildMovieCard(m) {
+  const sc    = m.imdb_score;
+  const color = sc >= 7 ? '#6AC045' : sc >= 5 ? '#FFB800' : '#e74c3c';
+  const genres = (m.genres || '').split(', ').slice(0, 2).join(', ');
+  return `
+    <a href="/movie/${m.id}"
+       class="cv-card group cursor-pointer flex flex-col">
+      <div class="relative h-[280px] overflow-hidden bg-surface-container-high">
+        ${m.poster_url
+          ? `<img src="${m.poster_url}" alt="${m.title}"
+                  class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500 ease-out"/>`
+          : `<div class="w-full h-full flex items-center justify-center">
+               <span class="material-symbols-outlined text-5xl text-white/10">movie</span>
+             </div>`}
+        
+        <!-- Poster gradient fade -->
+        <div class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[var(--color-surface-container)] to-transparent"></div>
+        
+        <!-- Play overlay -->
+        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+          <div class="w-11 h-11 rounded-full border border-primary/60 flex items-center justify-center backdrop-blur-md bg-black/30 text-primary scale-75 group-hover:scale-100 transition-all duration-300">
+            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings:'FILL' 1;">play_arrow</span>
+          </div>
+        </div>
+        
+        <!-- Score badge -->
+        <div class="absolute top-3 right-3 flex items-center gap-1 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-lg">
+          <span class="material-symbols-outlined text-[12px]" style="color:${color};font-variation-settings:'FILL' 1;">star</span>
+          <span class="text-white text-[11px] font-bold">${sc ?? 'N/A'}</span>
+        </div>
+        ${m.rating_pg ? `<div class="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded text-[9px] text-white/60 font-bold">${m.rating_pg}</div>` : ''}
+      </div>
+      <div class="p-4 flex flex-col gap-1.5 flex-1">
+        <h4 class="text-white font-bold text-[13px] group-hover:text-primary transition-colors leading-snug">
+          ${m.title}
+        </h4>
+        <div class="flex items-center gap-2 text-white/30 text-[11px]">
+          <span>${m.release_year}</span>
+        </div>
+        ${genres ? `<p class="text-white/25 text-[10px]">${genres}</p>` : ''}
+      </div>
+    </a>`;
+}
+
+// Load all movies (with optional genre/sort filter)
+async function loadAllMovies(genre = '', sort = 'release_year') {
+  const grid = document.getElementById('movies-grid');
+  grid.innerHTML = '<div class="skeleton rounded-lg h-64 col-span-5"></div>';
+
+  try {
+    let url = `${API}/api/movies/?sort=${sort}&order=${sort === 'title' ? 'ASC' : 'DESC'}`;
+    if (genre) url += `&genre=${encodeURIComponent(genre)}`;
+
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (!data.success) { grid.innerHTML = '<p class="text-on-surface-variant col-span-5">Failed to load movies.</p>'; return; }
+
+    grid.innerHTML = '';
+    if (!data.movies.length) {
+      grid.innerHTML = '<p class="text-on-surface-variant col-span-5 text-center py-12">No movies found for this filter.</p>';
+    } else {
+      data.movies.forEach(m => grid.insertAdjacentHTML('beforeend', buildMovieCard(m)));
+    }
+    document.getElementById('movies-count').textContent = `${data.count} movie${data.count !== 1 ? 's' : ''} found`;
+  } catch (err) {
+    grid.innerHTML = '<p class="text-red-400 col-span-5">Could not connect to server.</p>';
+  }
+}
+
+// Search movies
+async function searchMovies(q) {
+  currentSearchQuery = q;
+  const grid = document.getElementById('movies-grid');
+  grid.innerHTML = '<div class="skeleton rounded-lg h-64 col-span-5"></div>';
+
+  // Update heading to reflect search mode
+  document.getElementById('movies-heading').textContent      = `Search Results`;
+  document.getElementById('movies-subheading').textContent   = `Showing results for "${q}"`;
+  document.getElementById('clear-search-btn').classList.remove('hidden');
+
+  // Scroll to movies section
+  document.getElementById('movies-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  try {
+    const res  = await fetch(`${API}/api/movies/search?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    grid.innerHTML = '';
+
+    if (!data.success) {
+      grid.innerHTML = `<p class="text-red-400 col-span-5">${data.error}</p>`;
+      return;
+    }
+    if (!data.movies.length) {
+      grid.innerHTML = `<p class="text-on-surface-variant col-span-5 text-center py-12">No movies found for "${q}".</p>`;
+    } else {
+      data.movies.forEach(m => grid.insertAdjacentHTML('beforeend', buildMovieCard(m)));
+    }
+    document.getElementById('movies-count').textContent = `${data.count} result${data.count !== 1 ? 's' : ''} for "${q}"`;
+  } catch (err) {
+    grid.innerHTML = '<p class="text-red-400 col-span-5">Search failed. Is the server running?</p>';
+  }
+}
+
+function clearSearch() {
+  currentSearchQuery = '';
+  document.getElementById('movies-heading').textContent    = 'All Movies';
+  document.getElementById('movies-subheading').textContent = 'From the database';
+  document.getElementById('clear-search-btn').classList.add('hidden');
+  const genre = document.getElementById('filter-genre').value;
+  const sort  = document.getElementById('filter-sort').value;
+  loadAllMovies(genre, sort);
+}
+
+// Load all genre options into the filter dropdown
+async function loadGenreFilter() {
+  try {
+    const res  = await fetch(`${API}/api/movies/genres`);
+    const data = await res.json();
+    if (!data.success) return;
+    const select = document.getElementById('filter-genre');
+    data.genres.forEach(g => {
+      select.insertAdjacentHTML('beforeend', `<option value="${g.name}">${g.name}</option>`);
+    });
+  } catch (err) { console.error('Genre filter load failed:', err); }
+}
+
+// ===============================================================
+// MOOD-BASED DISCOVERY
+// ===============================================================
+let activeMood = null;
+
+async function selectMood(moodKey) {
+  // Highlight the active card
+  document.querySelectorAll('.mood-card').forEach(c => c.classList.remove('ring-2', 'ring-primary', 'bg-surface-container-high'));
+  event.currentTarget.classList.add('ring-2', 'ring-primary', 'bg-surface-container-high');
+  activeMood = moodKey;
+
+  const results = document.getElementById('mood-results');
+  const grid = document.getElementById('mood-results-grid');
+  const title = document.getElementById('mood-results-title');
+
+  results.classList.remove('hidden');
+  grid.innerHTML = '<div class="skeleton rounded-lg h-64 min-w-[200px]"></div><div class="skeleton rounded-lg h-64 min-w-[200px]"></div>';
+
+  try {
+    const res = await fetch(`${API}/api/recommendations/mood/${moodKey}`);
+    const data = await res.json();
+
+    if (!data.success || !data.movies.length) {
+      grid.innerHTML = '<p class="text-on-surface-variant">No movies match this mood yet.</p>';
+      return;
+    }
+
+    title.textContent = `${data.label} — ${data.count} movies found`;
+    grid.innerHTML = '';
+    data.movies.forEach(m => grid.insertAdjacentHTML('beforeend', buildMovieCard(m)));
+  } catch (err) {
+    console.error('Mood load failed:', err);
+    grid.innerHTML = '<p class="text-red-400">Failed to load mood movies.</p>';
+  }
+}
+
+
+// ===============================================================
+// BLIND DATE WITH A MOVIE
+// ===============================================================
+let currentBlindDate = null;
+
+async function loadBlindDate() {
+  // Reset to mystery state
+  document.getElementById('blind-mystery').classList.remove('hidden');
+  document.getElementById('blind-reveal').classList.add('hidden');
+
+  try {
+    const res = await fetch(`${API}/api/recommendations/blind-date`);
+    const data = await res.json();
+    if (!data.success) return;
+
+    currentBlindDate = data;
+
+    document.getElementById('blind-hint').textContent = `"${data.hint.cryptic_line}"`;
+    document.getElementById('blind-era').innerHTML = `<span class="material-symbols-outlined text-primary text-sm">calendar_today</span> ${data.hint.year_hint}`;
+    document.getElementById('blind-duration').innerHTML = `<span class="material-symbols-outlined text-primary text-sm">schedule</span> ${data.hint.duration_hint}`;
+    document.getElementById('blind-genre-hint').innerHTML = `<span class="material-symbols-outlined text-primary text-sm">category</span> ${data.hint.genre_hint}`;
+  } catch (err) {
+    console.error('Blind date load failed:', err);
+  }
+}
+
+function revealBlindDate() {
+  if (!currentBlindDate) return;
+  const r = currentBlindDate.reveal;
+
+  document.getElementById('blind-mystery').classList.add('hidden');
+  document.getElementById('blind-reveal').classList.remove('hidden');
+
+  if (r.poster_url) document.getElementById('blind-reveal-poster').src = r.poster_url;
+  document.getElementById('blind-reveal-title').textContent = r.title;
+  document.getElementById('blind-reveal-meta').textContent = `${r.release_year} · ${r.director} · ⭐ ${r.imdb_score}/10`;
+  document.getElementById('blind-reveal-plot').textContent = r.plot || '';
+  document.getElementById('blind-reveal-link').href = `/movie/${r.id}`;
+}
+
+
+// ===============================================================
+// FIND MY MATCH WIZARD
+// ===============================================================
+let wizardSelectedGenre = null;
+let wizardSelectedMovies = [];
+
+function openWizard() {
+  document.getElementById('wizard-modal').classList.remove('hidden');
+  resetWizard();
+  loadWizardGenres();
+}
+function closeWizard() {
+  document.getElementById('wizard-modal').classList.add('hidden');
+}
+function resetWizard() {
+  wizardSelectedGenre = null;
+  wizardSelectedMovies = [];
+  document.getElementById('wizard-step-1').classList.remove('hidden');
+  document.getElementById('wizard-step-2').classList.add('hidden');
+  document.getElementById('wizard-step-3').classList.add('hidden');
+  loadWizardGenres();
+}
+
+const GENRE_ICONS = {
+  'Action': '💥', 'Adventure': '🗺️', 'Sci-Fi': '🚀', 'Drama': '🎭',
+  'Comedy': '😂', 'Animation': '🎨', 'Horror': '👻', 'Thriller': '😰',
+  'Romance': '💕', 'Mystery': '🔍', 'Crime': '🔫', 'Fantasy': '🧙'
+};
+
+async function loadWizardGenres() {
+  const grid = document.getElementById('wizard-genre-grid');
+  grid.innerHTML = '<div class="skeleton h-16 rounded-xl col-span-3"></div>';
+
+  try {
+    const res = await fetch(`${API}/api/movies/genres`);
+    const data = await res.json();
+    if (!data.success) return;
+
+    grid.innerHTML = '';
+    data.genres.forEach(g => {
+      const icon = GENRE_ICONS[g.name] || '🎬';
+      grid.insertAdjacentHTML('beforeend', `
+        <button onclick="wizardSelectGenre(${g.id}, '${g.name}')"
+                class="wizard-genre-btn flex items-center gap-3 p-4 rounded-xl border border-white/10 bg-surface-container
+                       hover:bg-surface-container-high hover:border-primary/40 transition-all text-left cursor-pointer group"
+                data-genre-id="${g.id}">
+          <span class="text-2xl group-hover:scale-110 transition-transform">${icon}</span>
+          <span class="text-white font-bold text-sm">${g.name}</span>
+        </button>
+      `);
+    });
+  } catch (err) {
+    console.error('Wizard genres load failed:', err);
+  }
+}
+
+async function wizardSelectGenre(genreId, genreName) {
+  wizardSelectedGenre = genreId;
+
+  // Highlight selected
+  document.querySelectorAll('.wizard-genre-btn').forEach(b => b.classList.remove('ring-2', 'ring-primary'));
+  document.querySelector(`.wizard-genre-btn[data-genre-id="${genreId}"]`).classList.add('ring-2', 'ring-primary');
+
+  // Move to step 2
+  document.getElementById('wizard-step-1').classList.add('hidden');
+  document.getElementById('wizard-step-2').classList.remove('hidden');
+
+  const grid = document.getElementById('wizard-movies-grid');
+  grid.innerHTML = '<div class="skeleton h-48 rounded-xl col-span-3"></div>';
+
+  try {
+    const res = await fetch(`${API}/api/recommendations/wizard-top/${genreId}`);
+    const data = await res.json();
+    if (!data.success) return;
+
+    grid.innerHTML = '';
+    wizardSelectedMovies = [];
+    document.getElementById('wizard-step2-next').disabled = true;
+
+    data.movies.forEach(m => {
+      grid.insertAdjacentHTML('beforeend', `
+        <div class="wizard-movie-card cursor-pointer rounded-xl overflow-hidden border border-white/10 bg-surface-container
+                    hover:border-primary/40 transition-all group relative"
+             data-movie-id="${m.id}" onclick="wizardToggleMovie(${m.id})">
+          <div class="h-40 bg-surface-container-high overflow-hidden">
+            ${m.poster_url ? `<img src="${m.poster_url}" alt="${m.title}" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"/>` : '<div class="w-full h-full flex items-center justify-center"><span class="material-symbols-outlined text-3xl text-outline-variant">movie</span></div>'}
+          </div>
+          <div class="p-3">
+            <p class="text-white font-bold text-xs truncate">${m.title}</p>
+            <p class="text-on-surface-variant text-xs">${m.release_year} · ⭐${m.imdb_score}</p>
+          </div>
+          <div class="wizard-check absolute top-2 right-2 w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold hidden">✓</div>
+        </div>
+      `);
+    });
+  } catch (err) {
+    console.error('Wizard top movies load failed:', err);
+  }
+}
+
+function wizardToggleMovie(movieId) {
+  const idx = wizardSelectedMovies.indexOf(movieId);
+  const card = document.querySelector(`.wizard-movie-card[data-movie-id="${movieId}"]`);
+  const check = card.querySelector('.wizard-check');
+
+  if (idx > -1) {
+    wizardSelectedMovies.splice(idx, 1);
+    card.classList.remove('ring-2', 'ring-primary');
+    check.classList.add('hidden');
+  } else if (wizardSelectedMovies.length < 3) {
+    wizardSelectedMovies.push(movieId);
+    card.classList.add('ring-2', 'ring-primary');
+    check.classList.remove('hidden');
+  }
+
+  document.getElementById('wizard-step2-next').disabled = wizardSelectedMovies.length === 0;
+}
+
+async function wizardStep3() {
+  if (!wizardSelectedGenre || wizardSelectedMovies.length === 0) return;
+
+  document.getElementById('wizard-step-2').classList.add('hidden');
+  document.getElementById('wizard-step-3').classList.remove('hidden');
+
+  const result = document.getElementById('wizard-result');
+  const reasons = document.getElementById('wizard-reasons');
+  result.innerHTML = '<div class="skeleton h-48 w-full rounded-xl"></div>';
+  reasons.innerHTML = '';
+
+  try {
+    const res = await fetch(`${API}/api/recommendations/wizard-match`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ genre_id: wizardSelectedGenre, liked_movie_ids: wizardSelectedMovies }),
+      credentials: 'include'
+    });
+    const data = await res.json();
+
+    if (!data.success || !data.match) {
+      result.innerHTML = '<p class="text-on-surface-variant text-center">No match found. Try selecting different movies!</p>';
+      return;
+    }
+
+    const m = data.match;
+    result.innerHTML = `
+      <div class="flex-shrink-0 w-40 h-60 rounded-xl overflow-hidden bg-surface-container-high">
+        ${m.poster_url ? `<img src="${m.poster_url}" alt="${m.title}" class="w-full h-full object-cover"/>` : '<div class="w-full h-full flex items-center justify-center"><span class="material-symbols-outlined text-4xl text-outline-variant">movie</span></div>'}
+      </div>
+      <div class="flex-1 min-w-0">
+        <h3 class="text-white text-2xl font-black font-headline tracking-tight mb-1">${m.title}</h3>
+        <p class="text-on-surface-variant text-sm mb-2">${m.release_year} · ${m.director || 'Unknown'} · ⭐ ${m.imdb_score}/10</p>
+        <p class="text-on-surface-variant text-xs mb-1">${m.genres || ''}</p>
+        <p class="text-on-surface-variant text-sm leading-relaxed mt-3 line-clamp-3">${m.plot || ''}</p>
+      </div>
+    `;
+
+    document.getElementById('wizard-result-link').href = `/movie/${m.id}`;
+
+    // Render reasons
+    if (data.reasons && data.reasons.length) {
+      reasons.innerHTML = data.reasons.map(r =>
+        `<div class="flex items-center gap-3 text-sm text-on-surface-variant">
+          <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings:'FILL' 1;">check_circle</span>
+          ${r}
+        </div>`
+      ).join('');
+    }
+  } catch (err) {
+    console.error('Wizard match failed:', err);
+    result.innerHTML = '<p class="text-red-400 text-center">Match failed. Try again.</p>';
+  }
+}
+
+
+// ===============================================================
+// INIT — Run on page load
+// ===============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  // Wire Sign In nav link to open auth modal
+  const signInLink = document.getElementById('sign-in-link');
+  if (signInLink) {
+    signInLink.addEventListener('click', (e) => { e.preventDefault(); openAuthModal(); });
+  }
+
+  // Wire Add to Watchlist button
+  const wlBtn = document.getElementById('watchlist-btn');
+  if (wlBtn) {
+    wlBtn.addEventListener('click', () => addToWatchlist(window.currentFeaturedMovieId));
+  }
+
+  // Wire nav search bar
+  const navSearch = document.querySelector('input[placeholder="Search CineVault"]');
+  if (navSearch) {
+    navSearch.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && navSearch.value.trim()) {
+        searchMovies(navSearch.value.trim());
+        navSearch.value = '';
+      }
+    });
+  }
+
+  // Wire genre + sort filters
+  document.getElementById('filter-genre').addEventListener('change', () => {
+    if (currentSearchQuery) return; // don't interfere with search results
+    loadAllMovies(document.getElementById('filter-genre').value,
+                  document.getElementById('filter-sort').value);
+  });
+  document.getElementById('filter-sort').addEventListener('change', () => {
+    if (currentSearchQuery) return;
+    loadAllMovies(document.getElementById('filter-genre').value,
+                  document.getElementById('filter-sort').value);
+  });
+
+  // Check for ?q= query param (coming back from movie.html search)
+  const urlQ = new URLSearchParams(window.location.search).get('q');
+  if (urlQ) {
+    searchMovies(urlQ);
+  } else {
+    loadAllMovies();
+  }
+
+  // Load all dynamic data
+  loadFeaturedMovie();
+  loadBoxOffice();
+  loadEditorials();
+  checkLoginState();
+  loadRecommendations();  // Step 8
+  loadGenreFilter();
+
+  // NEW: Load Blind Date on page load
+  loadBlindDate();
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CineVault — Movie Details</title>
+<meta name="description" content="Read full movie details, community reviews, and tailored recommendations on CineVault."/>
+<script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<style type="text/tailwindcss">
+  @theme {
+    /* Colors - Neo Dark Vibrant Pattern */
+    /* Primary Neon Orange */
+    --color-primary: #FF5500;       
+    --color-primary-container: #FF6611; 
+    
+    /* Absolute Dark Canvas */
+    --color-background: #0B0B0B;   
+    --color-surface: #121212;      
+    
+    /* Soft lifted grays */
+    --color-surface-container-low: #151515;
+    --color-surface-container: #1A1A1A;
+    --color-surface-container-high: #222222;
+    --color-surface-container-highest: #2A2A2A;
+    
+    /* Text constraints */
+    --color-on-surface: #F9F9F9;
+    --color-on-surface-variant: #A4A4A4;
+    --color-outline-variant: #333333;   
+    
+    /* Typography System Pattern */
+    --font-heading: 'Outfit', sans-serif;
+    --font-label: 'Outfit', sans-serif;
+    --font-condensed: 'Outfit', sans-serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-sans: 'DM Sans', system-ui, sans-serif;
+  }
+  
+  body { 
+    background-color: var(--color-background); 
+    color: var(--color-on-surface); 
+    font-family: var(--font-sans); 
+  }
+  .font-headline { font-family: var(--font-heading); }
+  .font-condensed { font-family: var(--font-condensed); }
+  .font-label { font-family: var(--font-label); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.85em; font-weight: 600;}
+  
+  .cinematic-shadow { background: linear-gradient(0deg, var(--color-background) 0%, oklch(0.15 0.02 260 / 0.6) 50%, rgba(0,0,0,0) 100%); }
+  .glass-panel { background: oklch(0.18 0.02 260 / 0.7); backdrop-filter: blur(20px); }
+  .material-symbols-outlined { font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; vertical-align: middle; }
+  .star-btn { cursor:pointer; font-size:1.25rem; color:#555; transition:color .15s; }
+  .star-btn.active, .star-btn:hover { color:var(--color-primary); }
+  .skeleton { background:linear-gradient(90deg,var(--color-surface-container) 25%,var(--color-surface-container-high) 50%,var(--color-surface-container) 75%);
+    background-size:200% 100%; animation:shimmer 1.5s infinite; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+</style>
+</head>
+<body class="selection:bg-primary-container selection:text-on-primary-container">
+
+<!-- ============================================================
+     NAV BAR (same as index.html)
+     ============================================================ -->
+<header class="fixed top-0 w-full z-50 flex items-center justify-between px-8 bg-black border-b border-surface-container h-[68px]">
+  <div class="flex items-center gap-10">
+    <a href="/" class="bg-primary text-black font-black text-[22px] px-2 py-0.5 rounded-sm tracking-tighter">CineVault</a>
+    <nav class="hidden md:flex items-center gap-8">
+      <a class="text-white text-[14px] hover:text-primary transition-colors" href="/">Movies</a>
+      <a class="text-white text-[14px] hover:text-primary transition-colors" href="#">TV Shows</a>
+      <a class="text-white text-[14px] hover:text-primary transition-colors" href="#">Celebs</a>
+    </nav>
+  </div>
+  <div class="flex items-center gap-6">
+    <!-- Search bar -->
+    <div class="relative hidden lg:block">
+      <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-sm">search</span>
+      <input id="nav-search" class="bg-surface-container border-none rounded-full py-1.5 pl-10 pr-4 text-sm w-[260px] focus:ring-1 focus:ring-primary-container transition-all"
+             placeholder="Search movies..." type="text"/>
+    </div>
+    <div class="flex items-center gap-6 text-white text-[14px] font-medium">
+      <a class="flex items-center gap-1 hover:text-primary transition-colors" href="#">
+        <span class="material-symbols-outlined text-[20px]">bookmark</span> Watchlist
+      </a>
+      <div id="nav-user-actions" class="flex items-center gap-4">
+        <a id="sign-in-link" class="hover:text-primary transition-colors cursor-pointer" href="#">Sign In</a>
+      </div>
+      <button class="material-symbols-outlined hover:text-primary transition-colors">menu</button>
+    </div>
+  </div>
+</header>
+
+<main class="pt-[68px]">
+
+  <!-- ============================================================
+       HERO BACKDROP — blurred poster behind the page
+       ============================================================ -->
+  <div class="relative w-full h-[420px] overflow-hidden">
+    <img id="hero-backdrop"
+         class="w-full h-full object-cover object-top blur-sm scale-105 opacity-30"
+         src="" alt=""/>
+    <div class="absolute inset-0 bg-gradient-to-b from-black/30 via-black/60 to-black"></div>
+  </div>
+
+  <!-- ============================================================
+       MAIN CONTENT — poster + info side by side
+       ============================================================ -->
+  <div class="max-w-[1280px] mx-auto px-[80px] -mt-72 relative z-10 pb-24">
+
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-sm text-on-surface-variant mb-8">
+      <a href="/" class="hover:text-white transition-colors">Home</a>
+      <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+      <span id="breadcrumb-title" class="text-white truncate max-w-xs">Loading...</span>
+    </nav>
+
+    <!-- Poster + Info Row -->
+    <div class="flex gap-12 items-start">
+
+      <!-- Poster -->
+      <div class="flex-shrink-0 w-[260px]">
+        <div id="poster-skeleton" class="skeleton w-[260px] h-[390px] rounded-lg"></div>
+        <img id="movie-poster"
+             class="w-[260px] h-[390px] object-cover rounded-lg shadow-2xl hidden"
+             src="" alt="Movie Poster"/>
+        <a id="trailer-btn"
+           class="mt-6 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary-container shadow-xl shadow-primary/20 hover:shadow-primary/40
+                  text-white font-black py-4 rounded-full transition-all active:scale-95 hidden uppercase tracking-widest text-[13px]"
+           href="#" target="_blank" rel="noopener">
+          <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1;">play_arrow</span>
+          Watch Trailer
+        </a>
+      </div>
+
+      <!-- Info Panel -->
+      <div class="flex-1 min-w-0">
+
+        <!-- Title -->
+        <h1 id="movie-title"
+            class="text-white text-[60px] lg:text-[90px] font-black leading-[0.9] tracking-tighter font-headline mb-4 skeleton-line">
+          &nbsp;
+        </h1>
+
+        <!-- Meta row: year · PG · duration · language -->
+        <div class="flex flex-wrap items-center gap-2 text-on-surface-variant text-[13px] font-medium mt-3 mb-6">
+          <span id="meta-year">--</span>
+          <span class="text-outline-variant">·</span>
+          <span id="meta-pg" class="border border-outline-variant px-1.5 py-0.5 rounded text-xs">--</span>
+          <span class="text-outline-variant">·</span>
+          <span id="meta-duration">--</span>
+          <span class="text-outline-variant">·</span>
+          <span id="meta-language">--</span>
+        </div>
+
+        <!-- Genre tags -->
+        <div id="genre-tags" class="flex flex-wrap gap-2 mb-6"></div>
+
+        <!-- Scores row -->
+        <div class="flex items-center gap-10 mb-8 py-6 border-y border-outline-variant/20">
+          <!-- CineVault score -->
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest">CineVault Rating</span>
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary" style="font-variation-settings:'FILL' 1;">star</span>
+              <span id="score-imdb" class="font-condensed text-[28px] text-white font-bold tracking-tighter">
+                --<span class="text-[16px] text-on-surface-variant font-normal">/10</span>
+              </span>
+            </div>
+          </div>
+          <!-- Metascore -->
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest">Metascore</span>
+            <span id="score-meta" class="bg-[#6AC045] text-black font-condensed font-bold text-[20px] px-2 py-0.5 rounded-sm w-fit">--</span>
+          </div>
+          <!-- Community avg (from reviews) -->
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest">Community Avg</span>
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-[20px]" style="font-variation-settings:'FILL' 1;">star</span>
+              <span id="score-community" class="font-condensed text-[22px] text-white font-bold">--</span>
+            </div>
+          </div>
+          <!-- Your rating -->
+          <div class="flex flex-col gap-1">
+            <span class="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest">Your Rating</span>
+            <button id="rate-btn" onclick="openReviewModal()"
+                    class="flex items-center gap-2 group">
+              <span class="material-symbols-outlined text-white/40 group-hover:text-primary transition-colors text-[22px]">star</span>
+              <span class="text-white/40 group-hover:text-white text-[14px] font-bold uppercase transition-colors">Rate</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Director + Cast -->
+        <div class="flex flex-col gap-4 mb-8 text-sm">
+          <div class="flex items-start gap-3">
+            <span class="text-on-surface-variant w-20 flex-shrink-0 font-medium">Director</span>
+            <span id="info-director" class="text-white">--</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-on-surface-variant w-20 flex-shrink-0 font-medium">Cast</span>
+            <span id="info-cast" class="text-white">--</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-on-surface-variant w-20 flex-shrink-0 font-medium">Country</span>
+            <span id="info-country" class="text-white">--</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-on-surface-variant w-20 flex-shrink-0 font-medium">Box Office</span>
+            <span id="info-boxoffice" class="text-white">--</span>
+          </div>
+        </div>
+
+        <!-- Plot -->
+        <div class="mb-8">
+          <h3 class="text-xs uppercase tracking-widest text-on-surface-variant font-bold mb-3">Plot</h3>
+          <p id="movie-plot" class="text-on-surface-variant text-[15px] leading-relaxed">Loading...</p>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="flex items-center gap-4">
+          <button id="watchlist-btn" onclick="toggleWatchlist()"
+                  class="border border-white/30 hover:border-white text-white font-bold px-6 py-3 rounded-sm
+                         transition-all flex items-center gap-2 active:scale-95">
+            <span class="material-symbols-outlined text-[20px]">add</span>
+            Add to Watchlist
+          </button>
+          <button onclick="openReviewModal()"
+                  class="border border-outline-variant/40 hover:border-primary text-on-surface-variant
+                         hover:text-white font-bold px-6 py-3 rounded-sm transition-all flex items-center gap-2">
+            <span class="material-symbols-outlined text-[20px]">edit</span>
+            Write a Review
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         REVIEWS SECTION
+         ============================================================ -->
+    <section class="mt-20">
+      <div class="flex items-end justify-between mb-8">
+        <h2 class="text-primary-container text-[28px] font-bold">
+          User Reviews
+          <span id="review-count-badge" class="text-on-surface-variant text-base font-normal ml-2"></span>
+        </h2>
+        <button onclick="openReviewModal()"
+                class="text-sm font-bold text-primary-container border border-primary-container/30
+                       hover:bg-primary-container/10 px-4 py-2 rounded-sm transition-colors">
+          + Add Review
+        </button>
+      </div>
+
+      <!-- Review list -->
+      <div id="reviews-list" class="flex flex-col gap-6">
+        <!-- Skeleton -->
+        <div class="skeleton h-24 rounded-lg"></div>
+        <div class="skeleton h-24 rounded-lg"></div>
+      </div>
+
+      <!-- Pagination -->
+      <div id="pagination" class="flex items-center justify-center gap-4 mt-8 hidden">
+        <button id="prev-btn" onclick="loadReviews(currentPage - 1)"
+                class="px-4 py-2 border border-outline-variant/40 text-sm font-bold text-white/60
+                       hover:text-white hover:border-white rounded-sm transition-colors disabled:opacity-30"
+                disabled>← Prev</button>
+        <span id="page-label" class="text-on-surface-variant text-sm"></span>
+        <button id="next-btn" onclick="loadReviews(currentPage + 1)"
+                class="px-4 py-2 border border-outline-variant/40 text-sm font-bold text-white/60
+                       hover:text-white hover:border-white rounded-sm transition-colors disabled:opacity-30">
+          Next →</button>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SIMILAR MOVIES SECTION
+         ============================================================ -->
+    <section class="mt-24">
+      <h2 class="text-primary-container text-[28px] font-bold mb-8">More Like This</h2>
+      <div id="similar-grid" class="flex gap-6 overflow-x-auto pb-8 snap-x touch-pan-x" style="-ms-overflow-style:none; scrollbar-width:none;"></div>
+    </section>
+
+    <!-- ============================================================
+         MORE BY DIRECTOR SECTION
+         ============================================================ -->
+    <section class="mt-16" id="director-section">
+      <h2 id="director-section-title" class="text-primary-container text-[28px] font-bold mb-8">More by Director</h2>
+      <div id="director-grid" class="flex gap-6 overflow-x-auto pb-8 snap-x touch-pan-x" style="-ms-overflow-style:none; scrollbar-width:none;"></div>
+    </section>
+
+  </div><!-- /main content -->
+</main>
+
+<!-- Footer -->
+<footer class="bg-background w-full py-12 mt-8">
+  <div class="flex flex-col items-center gap-6 w-full max-w-7xl mx-auto px-4">
+    <a href="/" class="text-primary font-bold text-2xl tracking-tighter">CineVault</a>
+    <p class="text-on-surface-variant text-xs">© 1990-2024 by CineVault.com, Inc.</p>
+  </div>
+</footer>
+
+<!-- ============================================================
+     AUTH MODAL
+     ============================================================ -->
+<div id="auth-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 hidden">
+  <div class="bg-surface-container border border-surface-container-high rounded-xl p-8 w-full max-w-md relative">
+    <button onclick="closeAuthModal()" class="absolute top-4 right-4 material-symbols-outlined text-white/50 hover:text-white">close</button>
+    <div class="flex gap-4 mb-8 border-b border-surface-container-high pb-4">
+      <button id="tab-login" onclick="switchTab('login')" class="text-white font-bold text-sm pb-1 border-b-2 border-primary">Sign In</button>
+      <button id="tab-register" onclick="switchTab('register')" class="text-white/40 font-bold text-sm pb-1 border-b-2 border-transparent">Register</button>
+    </div>
+    <p id="auth-error" class="text-red-400 text-sm mb-4 hidden"></p>
+    <div id="form-login">
+      <div class="flex flex-col gap-4">
+        <input id="login-email" type="email" placeholder="Email" class="bg-surface-container text-white rounded-lg px-4 py-3 text-sm border border-outline-variant focus:border-primary outline-none"/>
+        <input id="login-password" type="password" placeholder="Password" class="bg-surface-container text-white rounded-lg px-4 py-3 text-sm border border-outline-variant focus:border-primary outline-none"/>
+        <button onclick="handleLogin()" class="bg-primary hover:bg-primary-container text-black font-bold py-3 rounded-lg transition-all">Sign In</button>
+      </div>
+    </div>
+    <div id="form-register" class="hidden">
+      <div class="flex flex-col gap-4">
+        <input id="reg-username" type="text" placeholder="Username" class="bg-surface-container text-white rounded-lg px-4 py-3 text-sm border border-outline-variant focus:border-primary outline-none"/>
+        <input id="reg-email" type="email" placeholder="Email" class="bg-surface-container text-white rounded-lg px-4 py-3 text-sm border border-outline-variant focus:border-primary outline-none"/>
+        <input id="reg-password" type="password" placeholder="Password (min 6 chars)" class="bg-surface-container text-white rounded-lg px-4 py-3 text-sm border border-outline-variant focus:border-primary outline-none"/>
+        <button onclick="handleRegister()" class="bg-primary hover:bg-primary-container text-black font-bold py-3 rounded-lg transition-all">Create Account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     REVIEW MODAL
+     ============================================================ -->
+<div id="review-modal" class="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 hidden">
+  <div class="bg-surface-container border border-surface-container-high rounded-xl p-8 w-full max-w-md">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-white font-bold text-lg">Rate &amp; Review</h3>
+      <button onclick="closeReviewModal()" class="material-symbols-outlined text-white/50 hover:text-white">close</button>
+    </div>
+    <!-- Star row -->
+    <div class="flex gap-1 mb-3" id="star-row">
+      <!-- JS injects stars -->
+    </div>
+    <p class="text-on-surface-variant text-sm mb-4">
+      Selected: <span id="rating-display" class="text-primary font-bold">--</span>/10
+    </p>
+    <textarea id="review-comment"
+              placeholder="Write your review (optional)..."
+              class="w-full bg-surface-container text-white rounded-lg px-4 py-3 text-sm border border-outline-variant
+                     focus:border-primary outline-none h-28 resize-none mb-4">
+    </textarea>
+    <div class="flex gap-3">
+      <button onclick="submitReview()"
+              class="flex-1 bg-primary text-black font-bold py-2.5 rounded-lg hover:bg-primary-container transition-all">
+        Submit
+      </button>
+      <button onclick="closeReviewModal()"
+              class="flex-1 border border-outline-variant text-white font-bold py-2.5 rounded-lg hover:border-white transition-all">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+const API = 'http://localhost:5000';
+
+const originalFetch = window.fetch;
+window.fetch = async function(...args) {
+    try {
+        const response = await originalFetch(...args);
+        if (response.status === 500) {
+            showToast("Server Error 500: Database Connection failed! Please enter MySQL password in config.py.", "error");
+        }
+        return response;
+    } catch (err) {
+        showToast("Fetch Failed! Is the server running?", "error");
+        throw err;
+    }
+};
+
+function showToast(msg, type='error') {
+    const t = document.createElement('div');
+    t.className = `fixed top-24 right-8 px-6 py-4 rounded-xl shadow-2xl z-[9999] transition-all transform flex items-center gap-3 ${type==='error' ? 'bg-red-900 border border-red-500' : 'bg-surface-container border border-primary'} text-white font-bold`;
+    t.innerHTML = `<span class="material-symbols-outlined">${type==='error' ? 'error' : 'check_circle'}</span> ${msg}`;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(()=>t.remove(), 300); }, 5000);
+}
+
+// ---------------------------------------------------------------
+// Read movie ID from the current URL: /movie/3 → 3
+// ---------------------------------------------------------------
+const movieId = parseInt(window.location.pathname.split('/movie/')[1]);
+
+let currentPage     = 1;
+let totalReviews    = 0;
+let selectedRating  = null;
+let inWatchlist     = false;
+let currentMovieData = null;
+
+// ---------------------------------------------------------------
+// HELPERS
+// ---------------------------------------------------------------
+function formatDuration(min) {
+  if (!min) return '--';
+  return `${Math.floor(min / 60)}h ${min % 60}min`;
+}
+
+function metascoreColor(score) {
+  if (!score) return '#555';
+  if (score >= 61) return '#6AC045';
+  if (score >= 40) return '#FFCC34';
+  return '#FF2A00';
+}
+
+function scoreColor(score) {
+  if (!score) return '#555';
+  if (score >= 7)  return '#6AC045';
+  if (score >= 5)  return 'var(--color-primary)';
+  return '#e74c3c';
+}
+
+// Small movie card used in similar / by-director grids
+function movieCard(m) {
+  const genres = (m.genres || '').split(', ').slice(0, 2).join(', ');
+  const poster = m.poster_url
+    ? `<img src="${m.poster_url}" alt="${m.title}"
+            class="w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500 ease-out"/>`
+    : `<div class="w-full h-full flex items-center justify-center bg-surface-container-high group-hover:scale-110 transition-transform duration-500">
+         <span class="material-symbols-outlined text-4xl text-outline-variant">movie</span>
+       </div>`;
+  return `
+    <a href="/movie/${m.id}"
+       class="bg-surface-container rounded-lg overflow-hidden group cursor-pointer
+              hover:bg-surface-container-highest hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 transform hover:-translate-y-1 flex flex-col relative z-0 hover:z-10">
+      <div class="relative h-44 overflow-hidden">
+        ${poster}
+        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+            <div class="w-10 h-10 rounded-full border-2 border-primary flex items-center justify-center backdrop-blur-md bg-black/20 text-primary transform scale-75 group-hover:scale-100 transition-all duration-300">
+               <span class="material-symbols-outlined text-[20px]" style="font-variation-settings:'FILL' 1;">play_arrow</span>
+            </div>
+        </div>
+        <div class="absolute top-2 right-2 flex items-center gap-1 bg-black/70 px-2 py-0.5 rounded">
+          <span class="material-symbols-outlined text-[13px]"
+                style="color:${scoreColor(m.imdb_score)};font-variation-settings:'FILL' 1;">star</span>
+          <span class="text-white text-xs font-bold">${m.imdb_score ?? 'N/A'}</span>
+        </div>
+      </div>
+      <div class="p-3 flex flex-col gap-1">
+        <h4 class="text-white font-bold text-sm group-hover:text-primary transition-colors leading-snug line-clamp-2">
+          ${m.title}
+        </h4>
+        <div class="flex items-center gap-2 text-on-surface-variant text-xs">
+          <span>${m.release_year}</span>
+          ${m.rating_pg ? `<span class="border border-outline-variant/50 px-1 rounded">${m.rating_pg}</span>` : ''}
+        </div>
+        ${genres ? `<p class="text-on-surface-variant text-xs">${genres}</p>` : ''}
+      </div>
+    </a>`;
+}
+
+// ---------------------------------------------------------------
+// LOAD MOVIE DETAIL
+// ---------------------------------------------------------------
+async function loadMovie() {
+  if (!movieId || isNaN(movieId)) {
+    document.getElementById('movie-title').textContent = 'Movie not found';
+    return;
+  }
+
+  try {
+    const res  = await fetch(`${API}/api/movies/${movieId}`);
+    const data = await res.json();
+    if (!data.success) {
+      document.getElementById('movie-title').textContent = 'Movie not found';
+      return;
+    }
+
+    const m = data.movie;
+    currentMovieData = m;
+
+    // <title>
+    document.title = `${m.title} — CineVault`;
+
+    // Backdrop + poster
+    if (m.poster_url) {
+      document.getElementById('hero-backdrop').src = m.poster_url;
+      const poster = document.getElementById('movie-poster');
+      poster.src = m.poster_url;
+      poster.alt = m.title;
+      poster.onload = () => {
+        document.getElementById('poster-skeleton').classList.add('hidden');
+        poster.classList.remove('hidden');
+      };
+      poster.onerror = () => {
+        document.getElementById('poster-skeleton').classList.add('hidden');
+        poster.classList.add('hidden');
+        document.getElementById('poster-skeleton').innerHTML =
+          '<div class="w-full h-full flex items-center justify-center"><span class="material-symbols-outlined text-6xl text-outline-variant">movie</span></div>';
+        document.getElementById('poster-skeleton').classList.remove('skeleton');
+        document.getElementById('poster-skeleton').classList.remove('hidden');
+      };
+    } else {
+      document.getElementById('poster-skeleton').classList.add('hidden');
+    }
+
+    // Trailer
+    if (m.trailer_url) {
+      const btn = document.getElementById('trailer-btn');
+      btn.href = m.trailer_url;
+      btn.classList.remove('hidden');
+    }
+
+    // Title & breadcrumb
+    document.getElementById('movie-title').textContent    = m.title;
+    document.getElementById('breadcrumb-title').textContent = m.title;
+
+    // Meta
+    document.getElementById('meta-year').textContent     = m.release_year ?? '--';
+    document.getElementById('meta-pg').textContent       = m.rating_pg    ?? '--';
+    document.getElementById('meta-duration').textContent = formatDuration(m.duration_min);
+    document.getElementById('meta-language').textContent = m.language      ?? '--';
+
+    // Genre tags
+    const tagContainer = document.getElementById('genre-tags');
+    tagContainer.innerHTML = '';
+    if (m.genres) {
+      m.genres.split(', ').forEach(g => {
+        tagContainer.insertAdjacentHTML('beforeend',
+          `<span class="border border-outline-variant/50 text-on-surface-variant
+                        text-xs px-3 py-1 rounded-full hover:border-primary
+                        hover:text-white transition-colors cursor-pointer">${g}</span>`);
+      });
+    }
+
+    // Scores
+    document.getElementById('score-imdb').innerHTML =
+      `${m.imdb_score ?? '--'}<span class="text-[16px] text-on-surface-variant font-normal">/10</span>`;
+
+    const metaEl = document.getElementById('score-meta');
+    if (m.metascore) {
+      metaEl.textContent = m.metascore;
+      metaEl.style.backgroundColor = metascoreColor(m.metascore);
+    } else {
+      metaEl.textContent = 'N/A';
+      metaEl.style.backgroundColor = '#555';
+    }
+
+    // Director, cast, country, box office
+    document.getElementById('info-director').textContent  = m.director        || 'Unknown';
+    document.getElementById('info-cast').textContent      = m.cast_list        || 'Unknown';
+    document.getElementById('info-country').textContent   = m.country          || '--';
+    document.getElementById('info-boxoffice').textContent = m.box_office_gross || '--';
+
+    // Plot
+    document.getElementById('movie-plot').textContent = m.plot || 'No description available.';
+
+    // Check watchlist state
+    checkWatchlistState();
+
+    // Load reviews & recommendations
+    loadReviews(1);
+    loadSimilar();
+    loadByDirector(m.director);
+
+  } catch (err) {
+    console.error('Movie load failed:', err);
+    document.getElementById('movie-title').textContent = 'Failed to load movie.';
+  }
+}
+
+// ---------------------------------------------------------------
+// REVIEWS
+// ---------------------------------------------------------------
+async function loadReviews(page = 1) {
+  currentPage = page;
+  const list = document.getElementById('reviews-list');
+  list.innerHTML = `<div class="skeleton h-24 rounded-lg"></div><div class="skeleton h-24 rounded-lg"></div>`;
+
+  try {
+    const res  = await fetch(`${API}/api/reviews/${movieId}?page=${page}&per_page=5`);
+    const data = await res.json();
+    if (!data.success) return;
+
+    totalReviews = data.total_reviews;
+
+    // Community avg
+    if (data.avg_rating) {
+      document.getElementById('score-community').textContent = `${data.avg_rating}/10`;
+    } else {
+      document.getElementById('score-community').textContent = 'No ratings yet';
+    }
+
+    // Badge
+    document.getElementById('review-count-badge').textContent =
+      `(${totalReviews} review${totalReviews !== 1 ? 's' : ''})`;
+
+    // Render
+    list.innerHTML = '';
+    if (!data.reviews.length) {
+      list.innerHTML = `<p class="text-on-surface-variant text-sm py-8 text-center">
+        No reviews yet. Be the first to write one!
+      </p>`;
+    } else {
+      data.reviews.forEach(r => {
+        const stars = '★'.repeat(r.rating) + '☆'.repeat(10 - r.rating);
+        const date  = new Date(r.created_at).toLocaleDateString('en-US', {year:'numeric',month:'short',day:'numeric'});
+        list.insertAdjacentHTML('beforeend', `
+          <div class="bg-surface-container rounded-lg p-6 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-surface-container-high flex items-center justify-center
+                            text-primary font-bold text-sm uppercase">
+                  ${(r.username || '?')[0]}
+                </div>
+                <div>
+                  <span class="text-white font-bold text-sm">${r.username ?? 'Anonymous'}</span>
+                  <p class="text-on-surface-variant text-xs">${date}</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-primary text-sm font-bold">${r.rating}/10</span>
+                <span class="text-primary text-xs tracking-tighter">${'★'.repeat(Math.round(r.rating / 2))}${'☆'.repeat(5 - Math.round(r.rating / 2))}</span>
+              </div>
+            </div>
+            ${r.comment ? `<p class="text-on-surface-variant text-sm leading-relaxed">${r.comment}</p>` : ''}
+            <div class="flex items-center gap-3 pt-1">
+              <button onclick="toggleLike(${r.id}, this)"
+                      class="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors text-xs font-medium">
+                <span class="material-symbols-outlined text-[16px]">thumb_up</span>
+                <span class="like-count">${r.likes_count ?? 0}</span> Helpful
+              </button>
+            </div>
+          </div>`);
+      });
+    }
+
+    // Pagination
+    const totalPages = Math.ceil(totalReviews / 5);
+    const pagination = document.getElementById('pagination');
+    if (totalPages > 1) {
+      pagination.classList.remove('hidden');
+      document.getElementById('page-label').textContent = `Page ${page} of ${totalPages}`;
+      document.getElementById('prev-btn').disabled = (page <= 1);
+      document.getElementById('next-btn').disabled = (page >= totalPages);
+    } else {
+      pagination.classList.add('hidden');
+    }
+
+  } catch (err) {
+    list.innerHTML = `<p class="text-on-surface-variant text-sm py-4">Could not load reviews.</p>`;
+  }
+}
+
+// Like / unlike a review
+async function toggleLike(reviewId, btn) {
+  try {
+    const res  = await fetch(`${API}/api/reviews/like/${reviewId}`, {
+      method: 'POST', credentials: 'include'
+    });
+    const data = await res.json();
+    if (data.success) {
+      btn.querySelector('.like-count').textContent = data.likes_count;
+    } else if (res.status === 401) {
+      openAuthModal();
+    }
+  } catch (err) { console.error(err); }
+}
+
+// ---------------------------------------------------------------
+// SIMILAR MOVIES
+// ---------------------------------------------------------------
+async function loadSimilar() {
+  try {
+    const res  = await fetch(`${API}/api/recommendations/similar/${movieId}`);
+    const data = await res.json();
+    const grid = document.getElementById('similar-grid');
+    if (!data.success || !data.movies.length) {
+      grid.innerHTML = '<p class="text-on-surface-variant text-sm col-span-4">No similar movies found.</p>';
+      return;
+    }
+    grid.innerHTML = data.movies.map(movieCard).join('');
+  } catch (err) {
+    console.error('Similar movies failed:', err);
+  }
+}
+
+// ---------------------------------------------------------------
+// MORE BY DIRECTOR
+// ---------------------------------------------------------------
+async function loadByDirector(director) {
+  const section = document.getElementById('director-section');
+  try {
+    const res  = await fetch(`${API}/api/recommendations/by-director/${movieId}`);
+    const data = await res.json();
+    if (!data.success || !data.movies.length) {
+      section.classList.add('hidden');
+      return;
+    }
+    document.getElementById('director-section-title').textContent = `More by ${director || 'Director'}`;
+    document.getElementById('director-grid').innerHTML = data.movies.map(movieCard).join('');
+  } catch (err) {
+    section.classList.add('hidden');
+  }
+}
+
+// ---------------------------------------------------------------
+// WATCHLIST
+// ---------------------------------------------------------------
+async function checkWatchlistState() {
+  try {
+    const res  = await fetch(`${API}/api/watchlist/check/${movieId}`, { credentials: 'include' });
+    const data = await res.json();
+    if (data.success && data.in_watchlist) setWatchlistAdded();
+  } catch (err) { /* not logged in – silently ignore */ }
+}
+
+function setWatchlistAdded() {
+  inWatchlist = true;
+  const btn = document.getElementById('watchlist-btn');
+  btn.innerHTML = `<span class="material-symbols-outlined text-[20px]">check</span> In Watchlist`;
+  btn.classList.add('border-primary', 'text-primary');
+  btn.classList.remove('border-white/30', 'text-white');
+}
+
+async function toggleWatchlist() {
+  try {
+    if (inWatchlist) {
+      const res  = await fetch(`${API}/api/watchlist/remove/${movieId}`, {
+        method: 'DELETE', credentials: 'include'
+      });
+      const data = await res.json();
+      if (data.success) {
+        inWatchlist = false;
+        const btn  = document.getElementById('watchlist-btn');
+        btn.innerHTML = `<span class="material-symbols-outlined text-[20px]">add</span> Add to Watchlist`;
+        btn.classList.remove('border-primary', 'text-primary');
+        btn.classList.add('border-white/30', 'text-white');
+      } else if (res.status === 401) { openAuthModal(); }
+    } else {
+      const res  = await fetch(`${API}/api/watchlist/add`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ movie_id: movieId })
+      });
+      const data = await res.json();
+      if (data.success) { setWatchlistAdded(); }
+      else if (res.status === 401) { openAuthModal(); }
+    }
+  } catch (err) { console.error('Watchlist error:', err); }
+}
+
+// ---------------------------------------------------------------
+// REVIEW MODAL
+// ---------------------------------------------------------------
+function openReviewModal() {
+  const modal    = document.getElementById('review-modal');
+  const starRow  = document.getElementById('star-row');
+  selectedRating = null;
+  document.getElementById('rating-display').textContent = '--';
+  document.getElementById('review-comment').value       = '';
+
+  starRow.innerHTML = '';
+  for (let i = 1; i <= 10; i++) {
+    starRow.insertAdjacentHTML('beforeend',
+      `<span class="star-btn" id="star-${i}" onclick="setRating(${i})">★</span>`);
+  }
+  modal.classList.remove('hidden');
+}
+
+function closeReviewModal() {
+  document.getElementById('review-modal').classList.add('hidden');
+}
+
+function setRating(n) {
+  selectedRating = n;
+  document.getElementById('rating-display').textContent = n;
+  for (let i = 1; i <= 10; i++) {
+    const s = document.getElementById(`star-${i}`);
+    s.classList.toggle('active', i <= n);
+  }
+}
+
+async function submitReview() {
+  if (!selectedRating) { alert('Please select a rating'); return; }
+  const comment = document.getElementById('review-comment').value.trim();
+
+  try {
+    const res  = await fetch(`${API}/api/reviews/add`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movie_id: movieId, rating: selectedRating, comment })
+    });
+    const data = await res.json();
+    if (data.success) {
+      closeReviewModal();
+      loadReviews(1); // Refresh reviews
+    } else if (res.status === 401) {
+      closeReviewModal();
+      openAuthModal();
+    } else {
+      alert(data.error);
+    }
+  } catch (err) { console.error('Review submit error:', err); }
+}
+
+// ---------------------------------------------------------------
+// AUTH
+// ---------------------------------------------------------------
+function openAuthModal()  { document.getElementById('auth-modal').classList.remove('hidden'); }
+function closeAuthModal() { document.getElementById('auth-modal').classList.add('hidden'); }
+
+function switchTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('form-login').classList.toggle('hidden', !isLogin);
+  document.getElementById('form-register').classList.toggle('hidden', isLogin);
+  document.getElementById('tab-login').className = isLogin
+    ? 'text-white font-bold text-sm pb-1 border-b-2 border-primary'
+    : 'text-white/40 font-bold text-sm pb-1 border-b-2 border-transparent';
+  document.getElementById('tab-register').className = !isLogin
+    ? 'text-white font-bold text-sm pb-1 border-b-2 border-primary'
+    : 'text-white/40 font-bold text-sm pb-1 border-b-2 border-transparent';
+  document.getElementById('auth-error').classList.add('hidden');
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.classList.toggle('hidden', !msg);
+}
+
+async function checkLoginState() {
+  try {
+    const res  = await fetch(`${API}/api/auth/me`, { credentials: 'include' });
+    const data = await res.json();
+    if (data.logged_in) {
+      const container = document.getElementById('nav-user-actions');
+      if (container) {
+        container.innerHTML = `
+          <a href="/profile" class="text-white hover:text-primary font-bold mr-4 text-sm flex items-center gap-2"><span class="material-symbols-outlined">person</span> ${data.user.username}</a>
+          <button onclick="handleLogout()" class="text-on-surface-variant hover:text-white text-sm font-bold border border-outline-variant px-3 py-1.5 rounded-sm transition-colors">Logout</button>
+        `;
+      }
+    }
+  } catch (err) {}
+}
+
+async function handleLogin() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value.trim();
+  if (!email || !password) { showAuthError('Please fill in all fields'); return; }
+  try {
+    const res  = await fetch(`${API}/api/auth/login`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (data.success) {
+      closeAuthModal();
+      const link     = document.getElementById('sign-in-link');
+      link.textContent = `👤 ${data.user.username}`;
+      link.onclick     = (e) => { e.preventDefault(); handleLogout(); };
+    } else { showAuthError(data.error); }
+  } catch (err) { showAuthError('Could not connect to server'); }
+}
+
+async function handleRegister() {
+  const username = document.getElementById('reg-username').value.trim();
+  const email    = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value.trim();
+  if (!username || !email || !password) { showAuthError('Please fill in all fields'); return; }
+  try {
+    const res  = await fetch(`${API}/api/auth/register`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password })
+    });
+    const data = await res.json();
+    if (data.success) {
+      closeAuthModal();
+      const link     = document.getElementById('sign-in-link');
+      link.textContent = `👤 ${data.user.username}`;
+      link.onclick     = (e) => { e.preventDefault(); handleLogout(); };
+    } else { showAuthError(data.error); }
+  } catch (err) { showAuthError('Could not connect to server'); }
+}
+
+async function handleLogout() {
+  await fetch(`${API}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+  window.location.reload();
+}
+
+// ---------------------------------------------------------------
+// NAV SEARCH
+// ---------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+  checkLoginState();
+  loadMovie();
+
+  // Wire sign-in link
+  document.getElementById('sign-in-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    openAuthModal();
+  });
+
+  // Nav search → go to home with ?q=
+  const searchInput = document.getElementById('nav-search');
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && searchInput.value.trim()) {
+      window.location.href = `/?q=${encodeURIComponent(searchInput.value.trim())}`;
+    }
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CineVault — Your Profile</title>
+<meta name="description" content="View your Watchlist, recent reviews, and personalized movie recommendations on CineVault."/>
+<script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<style type="text/tailwindcss">
+  @theme {
+    /* Colors - Neo Dark Vibrant Pattern */
+    /* Primary Neon Orange */
+    --color-primary: #FF5500;       
+    --color-primary-container: #FF6611; 
+    
+    /* Absolute Dark Canvas */
+    --color-background: #0B0B0B;   
+    --color-surface: #121212;      
+    
+    /* Soft lifted grays */
+    --color-surface-container-low: #151515;
+    --color-surface-container: #1A1A1A;
+    --color-surface-container-high: #222222;
+    --color-surface-container-highest: #2A2A2A;
+    
+    /* Text constraints */
+    --color-on-surface: #F9F9F9;
+    --color-on-surface-variant: #A4A4A4;
+    --color-outline-variant: #333333;   
+    
+    --font-heading: 'Outfit', sans-serif;
+    --font-label: 'Outfit', sans-serif;
+    --font-condensed: 'Outfit', sans-serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-sans: 'DM Sans', system-ui, sans-serif;
+  }
+  
+  body { 
+    background-color: var(--color-background); 
+    color: var(--color-on-surface); 
+    font-family: var(--font-sans); 
+  }
+  .font-headline { font-family: var(--font-heading); }
+  .font-condensed { font-family: var(--font-condensed); }
+  .font-label { font-family: var(--font-label); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.85em; font-weight: 600;}
+  
+  .glass-panel { background: oklch(0.18 0.02 260 / 0.7); backdrop-filter: blur(20px); }
+  .material-symbols-outlined { font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; vertical-align: middle; }
+</style>
+</head>
+<body class="selection:bg-primary-container selection:text-on-primary-container">
+
+<header class="fixed top-0 w-full z-50 flex items-center justify-between px-8 bg-black border-b border-surface-container h-[68px]">
+  <div class="flex items-center gap-10">
+    <a href="/" class="bg-primary text-black font-black text-[22px] px-2 py-0.5 rounded-sm tracking-tighter">CineVault</a>
+    <nav class="hidden md:flex items-center gap-8">
+      <a class="text-white text-[14px] hover:text-primary transition-colors duration-200" href="/">Movies</a>
+      <a class="text-white text-[14px] hover:text-primary transition-colors duration-200" href="#">TV Shows</a>
+      <a class="text-white text-[14px] hover:text-primary transition-colors duration-200" href="#">Awards &amp; Events</a>
+      <a class="text-white text-[14px] hover:text-primary transition-colors duration-200" href="#">Celebs</a>
+    </nav>
+  </div>
+  <div class="flex items-center gap-6">
+    <div class="relative hidden lg:block">
+      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant z-10 text-[20px]">search</span>
+      <input class="bg-surface-container border border-surface-container-high rounded-full w-[360px] h-[36px] pl-10 pr-4 text-[14px] 
+                    text-white placeholder-on-surface-variant focus:outline-none focus:border-primary focus:bg-surface-container-highest transition-all duration-300"
+             placeholder="Search CineVault" type="text"/>
+    </div>
+    <div id="nav-user-actions" class="flex items-center gap-4 border-l border-surface-container-highest pl-6 h-8">
+      <button id="sign-in-link" class="text-white font-bold text-[14px] hover:text-primary transition-colors duration-200">Sign In</button>
+    </div>
+  </div>
+</header>
+
+<main class="pt-[68px]">
+  <section class="max-w-[1280px] mx-auto px-[80px] py-16">
+    <h1 class="text-primary-container text-[40px] font-headline font-black mb-2">Your Dashboard</h1>
+    <p class="text-on-surface-variant font-label text-sm uppercase tracking-[0.2em] mb-12">Manage your CineVault activity</p>
+
+    <!-- Watchlist -->
+    <h2 class="text-white text-[24px] font-bold mb-6">My Watchlist</h2>
+    <div id="watchlist-grid" class="flex gap-6 overflow-x-auto pb-8 snap-x touch-pan-x" style="-ms-overflow-style:none; scrollbar-width:none;">
+      <!-- JS dynamically injects cards here -->
+    </div>
+
+    <!-- Reviews -->
+    <h2 class="text-white text-[24px] font-bold mt-12 mb-6">My Reviews</h2>
+    <div id="reviews-list" class="flex flex-col gap-4">
+       <!-- JS dynamically injects cards here -->
+    </div>
+  </section>
+</main>
+
+<script>
+const API = 'http://localhost:5000';
+
+const originalFetch = window.fetch;
+window.fetch = async function(...args) {
+    try {
+        const response = await originalFetch(...args);
+        if (response.status === 500) {
+            showToast("Server Error 500: Database Connection failed! Please enter MySQL password in config.py.", "error");
+        }
+        return response;
+    } catch (err) {
+        showToast("Fetch Failed! Is the server running?", "error");
+        throw err;
+    }
+};
+
+function showToast(msg, type='error') {
+    const t = document.createElement('div');
+    t.className = `fixed top-24 right-8 px-6 py-4 rounded-xl shadow-2xl z-[9999] transition-all transform flex items-center gap-3 ${type==='error' ? 'bg-red-900 border border-red-500' : 'bg-surface-container border border-primary'} text-white font-bold`;
+    t.innerHTML = `<span class="material-symbols-outlined">${type==='error' ? 'error' : 'check_circle'}</span> ${msg}`;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(()=>t.remove(), 300); }, 5000);
+}
+
+// Check Login State
+async function checkLoginState() {
+  try {
+    const res = await fetch(`${API}/api/auth/me`, { credentials: 'include' });
+    const data = await res.json();
+    if (data.success && data.user) {
+      document.getElementById('nav-user-actions').innerHTML = `
+        <a href="/profile" class="text-white hover:text-primary font-bold mr-4 text-sm">${data.user.username}</a>
+        <button onclick="handleLogout()" class="text-on-surface-variant hover:text-white text-sm font-bold border border-outline-variant/40 px-4 py-1.5 rounded-full transition-colors">Logout</button>
+      `;
+      loadWatchlist();
+    } else {
+      window.location.href = "/";
+    }
+  } catch (err) { console.error('Auth error:', err); }
+}
+
+async function loadWatchlist() {
+    try {
+        const res = await fetch(`${API}/api/watchlist/`, { credentials: 'include' });
+        const data = await res.json();
+        
+        let wlHtml = '';
+        if (data.success && data.watchlist.length > 0) {
+            data.watchlist.forEach(m => {
+                wlHtml += `
+                <a href="/movie/${m.movie_id}" class="group relative block rounded-2xl overflow-hidden shrink-0 w-48 snap-center shadow-lg border border-white/5">
+                  <div class="h-72 bg-surface-container overflow-hidden w-full relative">
+                    ${m.poster_url ? `<img src="${m.poster_url}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>` : ''}
+                  </div>
+                  <div class="p-3">
+                    <h4 class="text-white font-bold text-sm truncate">${m.title}</h4>
+                    <span class="text-on-surface-variant text-xs">Added Recently</span>
+                  </div>
+                </a>`;
+            });
+        } else {
+            wlHtml = `<p class="text-on-surface-variant">Your watchlist is empty.</p>`;
+        }
+        document.getElementById('watchlist-grid').innerHTML = wlHtml;
+        document.getElementById('reviews-list').innerHTML = `<p class="text-on-surface-variant">Reviews fetch implemented via API (No reviews yet).</p>`;
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    checkLoginState();
+});
+
+async function handleLogout() {
+  try {
+    await fetch(`${API}/api/auth/logout`, { method:'POST', credentials:'include' });
+    window.location.href = "/";
+  } catch(err) {}
+}
+</script>
+</body>
+</html>
